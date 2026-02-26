@@ -60,6 +60,8 @@ class Trackball {
 
   _onMouseDown(e) {
     if (e.button !== 0) return;
+    // Ignore synthetic mouse events fired by iOS after touch
+    if (this._lastTouchEnd && Date.now() - this._lastTouchEnd < 500) return;
     this._isDragging = true;
     this._prevX = e.clientX;
     this._prevY = e.clientY;
@@ -93,6 +95,8 @@ class Trackball {
       this._isDragging = true;
       this._prevX = t.clientX;
       this._prevY = t.clientY;
+      this._touchStartX = t.clientX;
+      this._touchStartY = t.clientY;
       this.totalDragDistance = 0;
       this.wasClick = false;
     }
@@ -117,7 +121,13 @@ class Trackball {
   _onTouchEnd(e) {
     if (e.touches.length === 0) {
       this._isDragging = false;
-      this.wasClick = this.totalDragDistance < 10;
+      this._lastTouchEnd = Date.now();
+      // Check both accumulated distance and straight-line displacement.
+      // iOS may coalesce touchmove events, making totalDragDistance too low.
+      const ct = e.changedTouches[0];
+      const displacement = Math.abs(ct.clientX - this._touchStartX)
+        + Math.abs(ct.clientY - this._touchStartY);
+      this.wasClick = this.totalDragDistance < 10 && displacement < 10;
     }
   }
 
