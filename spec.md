@@ -87,9 +87,10 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 ### Implementation Details
 - Click vs drag threshold: < 5px total movement = click.
 - Mouse: `mousedown`/`mousemove`/`mouseup`/`wheel` events.
-- Touch: `touchstart`/`touchmove`/`touchend` with `preventDefault()`.
+- Touch: `touchstart`/`touchmove`/`touchend`. CSS `touch-action: none` on html/body/canvas to prevent browser gesture interference.
 - Pinch detection: track distance between two touch points.
 - **Pinch → single-finger transition**: trackball is disabled during pinch and reset when transitioning to single finger to prevent viewport jumps.
+- **Click debouncing**: 100ms debounce to prevent double-fire on Windows touchscreens (which emit both touch and mouse events).
 - Hit testing: `THREE.Raycaster` against vertex sphere meshes, pick closest intersection.
 
 ---
@@ -121,10 +122,16 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 ## Puzzle Logic
 
 ### Flow
-1. Start: all rings OFF (solved state, blue background).
-2. **Scramble**: simulate N random vertex clicks (N=4 for 16-cell). Ensure at least one ring is ON.
+1. Start: all rings OFF (solved state, blue background). Auto-scramble on first load.
+2. **Scramble**: simulate N random vertex clicks (N=4 for 16-cell). Ensure at least one ring is ON. Enters **challenge mode**.
 3. Player clicks vertices to toggle rings.
-4. **Win** when all rings are OFF (primary) or all ON (secondary).
+4. **Win** when all rings are OFF (primary) or all ON (secondary). Win popup shows **only once** per scramble.
+5. After winning, the player can continue clicking (exploration) but no further win popups until next scramble.
+
+### Game Modes
+- **Challenge mode** (`isChallenge = true`): active after Scramble. Win detection is enabled. Win popup shows once (`hasWon` flag).
+- **Exploration mode** (`isChallenge = false`): active after Reset or after a win is dismissed. Player can freely toggle rings. No win popup. Move counter still tracks clicks.
+- Scramble resets both `isChallenge = true` and `hasWon = false`.
 
 ### Win Condition
 - **All OFF**: scene background → deep blue (#0a0a3a). Overlay: "Lights Out! 🎉" + move count.

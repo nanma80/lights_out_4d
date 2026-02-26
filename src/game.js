@@ -7,13 +7,14 @@ export class Game {
   constructor(polytope) {
     this.polytope = polytope;
     this.vertexToRings = buildVertexToRings(polytope);
-    this.ringStates = new Array(polytope.rings.length).fill(false); // false = OFF
+    this.ringStates = new Array(polytope.rings.length).fill(false);
     this.moveCount = 0;
-    this.onStateChange = null; // callback
-    this.onWin = null; // callback
+    this.isChallenge = false;
+    this.hasWon = false;
+    this.onStateChange = null;
+    this.onWin = null;
   }
 
-  // Toggle all rings passing through a vertex
   clickVertex(vertexIndex) {
     const ringIndices = this.vertexToRings[vertexIndex];
     ringIndices.forEach(ri => {
@@ -21,10 +22,9 @@ export class Game {
     });
     this.moveCount++;
     if (this.onStateChange) this.onStateChange();
-    this.checkWin();
+    if (this.isChallenge && !this.hasWon) this.checkWin();
   }
 
-  // Scramble by simulating N random vertex clicks from all-OFF state
   scramble(numClicks) {
     this.reset();
     const numVertices = this.polytope.vertices.length;
@@ -35,18 +35,20 @@ export class Game {
         this.ringStates[ri] = !this.ringStates[ri];
       });
     }
-    // Ensure at least one ring is ON (avoid trivially solved scramble)
     if (this.ringStates.every(s => !s)) {
       return this.scramble(numClicks);
     }
     this.moveCount = 0;
+    this.isChallenge = true;
+    this.hasWon = false;
     if (this.onStateChange) this.onStateChange();
   }
 
-  // Reset all rings to OFF
   reset() {
     this.ringStates.fill(false);
     this.moveCount = 0;
+    this.isChallenge = false;
+    this.hasWon = false;
     if (this.onStateChange) this.onStateChange();
   }
 
@@ -54,8 +56,10 @@ export class Game {
     const allOff = this.ringStates.every(s => !s);
     const allOn = this.ringStates.every(s => s);
     if (allOff && this.onWin) {
+      this.hasWon = true;
       this.onWin('off');
     } else if (allOn && this.onWin) {
+      this.hasWon = true;
       this.onWin('on');
     }
   }

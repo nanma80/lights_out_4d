@@ -52,11 +52,10 @@ function updateVisuals() {
 function showWin(type) {
   if (type === 'off') {
     winMessage.textContent = 'Lights Out! 🎉';
-    renderer.setBackgroundColor(0x0a0a3a);
+    document.getElementById('win-subtitle').textContent = '';
   } else {
     winMessage.textContent = 'All Lit Up! ✨';
     document.getElementById('win-subtitle').textContent = 'Now try turning them all off!';
-    renderer.setBackgroundColor(0x3a2a0a);
   }
   winMoves.textContent = `Moves: ${game.moveCount}`;
   winOverlay.classList.add('visible');
@@ -64,7 +63,8 @@ function showWin(type) {
 
 function hideWin() {
   winOverlay.classList.remove('visible');
-  renderer.resetBackground();
+  // Let updateVisuals handle background color based on current ring state
+  updateVisuals();
 }
 
 function init() {
@@ -92,10 +92,19 @@ function init() {
     rebuildScene();
   };
 
+  // Unified click detection for mouse and touch
+  let lastClickTime = 0;
+  function handleClick(clientX, clientY) {
+    const now = Date.now();
+    if (now - lastClickTime < 100) return; // debounce double-fire
+    lastClickTime = now;
+    clickHandler.testClick(clientX, clientY);
+  }
+
   // Mouse click detection (after drag check)
   renderer.domElement.addEventListener('mouseup', (e) => {
     if (trackball.wasClick) {
-      clickHandler.testClick(e.clientX, e.clientY);
+      handleClick(e.clientX, e.clientY);
     }
   });
 
@@ -109,7 +118,7 @@ function init() {
 
   renderer.domElement.addEventListener('touchend', (e) => {
     if (trackball.wasClick && touchStartPos) {
-      clickHandler.testClick(touchStartPos.x, touchStartPos.y);
+      handleClick(touchStartPos.x, touchStartPos.y);
     }
     touchStartPos = null;
   }, { passive: true });
@@ -136,7 +145,6 @@ function init() {
 
   renderer.domElement.addEventListener('touchmove', (e) => {
     if (e.touches.length === 2) {
-      e.preventDefault();
       wasPinching = true;
       trackball._isDragging = false;
       const dx = e.touches[0].clientX - e.touches[1].clientX;

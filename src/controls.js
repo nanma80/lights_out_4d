@@ -35,9 +35,9 @@ class Trackball {
     domElement.addEventListener('mousedown', this._onMouseDown);
     domElement.addEventListener('mousemove', this._onMouseMove);
     domElement.addEventListener('mouseup', this._onMouseUp);
-    domElement.addEventListener('touchstart', this._onTouchStart, { passive: false });
-    domElement.addEventListener('touchmove', this._onTouchMove, { passive: false });
-    domElement.addEventListener('touchend', this._onTouchEnd, { passive: false });
+    domElement.addEventListener('touchstart', this._onTouchStart, { passive: true });
+    domElement.addEventListener('touchmove', this._onTouchMove, { passive: true });
+    domElement.addEventListener('touchend', this._onTouchEnd, { passive: true });
 
     this.totalDragDistance = 0;
     this.wasClick = false;
@@ -89,7 +89,6 @@ class Trackball {
 
   _onTouchStart(e) {
     if (e.touches.length === 1) {
-      e.preventDefault();
       const t = e.touches[0];
       this._isDragging = true;
       this._prevX = t.clientX;
@@ -101,7 +100,6 @@ class Trackball {
 
   _onTouchMove(e) {
     if (e.touches.length === 1 && this._isDragging) {
-      e.preventDefault();
       const t = e.touches[0];
       const dx = t.clientX - this._prevX;
       const dy = t.clientY - this._prevY;
