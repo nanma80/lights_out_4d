@@ -1,7 +1,9 @@
 # Lights Out 4D — Game Spec
 
 ## Concept
-A browser-based puzzle game inspired by the classic "Lights Out," played on the structure of a **4D polytope**. The polytope is visualized via **stereographic projection** into 3D, rendered with a WebGL 3D engine. Vertices appear as spheres, edges as circular arcs forming rings. Players click vertices to toggle the rings passing through them. The goal is to turn all rings OFF.
+A browser-based puzzle game inspired by the classic "Lights Out," played on the structure of a **4D polytope**. The polytope is visualized via **stereographic projection** into 3D, rendered with Three.js (WebGL). Vertices appear as spheres, edges as circular arcs forming rings. Players click vertices to toggle the rings passing through them. The goal is to turn all rings OFF.
+
+**Live**: https://nanma80.github.io/lights_out_4d
 
 ---
 
@@ -10,43 +12,34 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 ### The Polytope
 - The game supports multiple **4D regular polytopes** as difficulty levels. All polytope vertices lie on the unit 3-sphere S³.
 - Each polytope's edges lie along **great circles** of S³. Multiple edges concatenate to form closed **rings**. These rings are the core game objects.
-- Supported polytopes (in order of complexity, v1 ships 16-cell only):
+- Supported polytopes (in order of complexity):
 
-| Polytope | Vertices | Edges | Rings | Vertices/Ring | Edges/Ring | Status |
-|----------|----------|-------|-------|---------------|------------|--------|
-| 16-cell  | 8        | 24    | 6     | 4             | 4          | v1     |
-| 24-cell  | 24       | 96    | 16    | 6             | 6          | Future |
-| 600-cell | 120      | 720   | 72    | 10            | 10         | Future |
+| Polytope | Vertices | Edges | Rings | Vertices/Ring | Edges/Ring | Status      |
+|----------|----------|-------|-------|---------------|------------|-------------|
+| 16-cell  | 8        | 24    | 6     | 4             | 4          | Implemented |
+| 24-cell  | 24       | 96    | 16    | 6             | 6          | Future      |
+| 600-cell | 120      | 720   | 72    | 10            | 10         | Future      |
 
-- The architecture should define a polytope as data: a list of 4D vertex coordinates + edge list. Rings, adjacency, and Hopf fibration grouping are derived or provided per polytope.
+- Each polytope is defined as a data object (see Polytope Data Format below). Adding a new polytope = adding a new data file.
 
 ### Ring Coloring
-- Each ring is assigned a **color** for its ON state. OFF-state rings are always gray.
-- v1: assign each ring a **distinct color** from a palette of 6–8 vibrant hues. No Hopf fibration grouping needed yet.
-- Future: rings will be grouped by **Hopf fibration** bundles — rings in the same bundle share a color. The `bundle` field in the polytope data supports this. For now, each ring can use its own index as its bundle (i.e., unique colors).
-- Color palette example: `["#ff3366", "#33ff66", "#3366ff", "#ffcc00", "#ff6633", "#cc33ff"]`.
+- Each ring is assigned a **color** for its ON state. OFF-state rings are always medium gray (#888888, 70% opacity).
+- v1: each ring gets a **distinct color** from a palette of 6 vibrant hues.
+- Future: rings will be grouped by **Hopf fibration** bundles — rings in the same bundle share a color. The `bundle` field in the polytope data supports this.
+- Color palette: `["#ff3366", "#33ff66", "#3366ff", "#ffcc00", "#ff6633", "#cc33ff"]`.
 
 ### Stereographic Projection (4D → 3D)
-- All polytope vertices lie on S³ (the unit 3-sphere in R⁴).
 - Project from the **south pole** (0, 0, 0, −1) onto the equatorial hyperplane w = 0:
   - Given a point (x, y, z, w) on S³: `X = x / (1 + w)`, `Y = y / (1 + w)`, `Z = z / (1 + w)`.
 - **Key property**: great circles on S³ project to circles (or straight lines) in R³.
-  - Edges of the 16-cell that lie along a great circle of S³ project to **circular arcs** in 3D.
-  - When multiple edges share a great circle, they form a complete **ring** (circle) in the projection.
-
-### Edge Rendering as Arcs
-- Each edge connects two vertices on S³. The geodesic between them (a great-circle arc on S³) projects to a **circular arc** in R³ under stereographic projection.
-- To draw each edge:
-  1. Compute the great circle on S³ containing both endpoints.
-  2. Stereographically project several sample points along the arc to get a 3D circular arc.
-  3. Render as a tube/curve in 3D (e.g., `THREE.TubeGeometry` along the arc).
-- Alternatively, compute the projected circle analytically (center + radius + plane in R³) and render an arc of that circle between the two projected endpoints.
+- Edges are drawn by sampling points along the great-circle arc on S³, projecting each to R³, and rendering as a tube (`THREE.TubeGeometry` along a `CatmullRomCurve3`).
 
 ### 4D Rotation
-- The polytope can be rotated in 4D before projection using rotation matrices in the 6 rotation planes: XY, XZ, XW, YZ, YW, ZW.
-- The 4D rotation is driven by the scroll/pinch interaction (see Interaction section). The rotation plane is determined by the current 3D camera view direction combined with the W axis.
-- The rotation is applied to the 4D vertex coordinates, then re-projected stereographically and the 3D scene geometry is rebuilt.
-- No auto-rotation — the 4D viewpoint stays fixed until the player explicitly scrolls/pinches.
+- Driven by **scroll wheel / two-finger pinch** (see Interaction section).
+- Rotates in the plane spanned by the **current 3D camera view direction** and the **W axis**. Decomposed into weighted XW, YW, ZW rotations.
+- Applied to 4D vertex coordinates before projection. Scene geometry is fully rebuilt after rotation.
+- Initial 4D viewpoint: small rotations in XW (0.4), YW (0.3), ZW (0.2), XY (0.15) to break symmetry and avoid degenerate projections.
+- No auto-rotation.
 
 ---
 
@@ -54,76 +47,99 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 
 ### Technology
 - Plain HTML/CSS/JS — no UI frameworks, no build step.
-- Single or multiple files — whichever is cleaner for the implementation.
-- **Three.js** for 3D rendering (load from CDN, e.g., `https://unpkg.com/three@<version>/build/three.module.js`).
-- Include viewport meta tag: `<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">`.
-- Three.js WebGLRenderer handles devicePixelRatio automatically via `renderer.setPixelRatio(devicePixelRatio)`.
+- **Three.js v0.160.0** loaded from CDN (`unpkg.com`).
+- Viewport meta tag with `user-scalable=no`.
+- `renderer.setPixelRatio(devicePixelRatio)` for crisp rendering on high-DPI screens.
 
 ### Visual Style
-- **Reference**: the stereographic projection style from Wikipedia's 16-cell article ([Stereographic_polytope_16cell_colour.png](https://commons.wikimedia.org/wiki/File:Stereographic_polytope_16cell_colour.png)) — smooth colored rings as 3D circles, small spheres at vertices, dark background.
-- Background: black or very dark (#0a0a0a).
-- **Vertices**: rendered as `THREE.SphereGeometry` meshes. Small, neutral color (white or light gray). Always visible.
-- **Rings (ON state)**: rendered as glowing colored tubes — like glowsticks. Color determined by Hopf fibration bundle. Smooth, continuous circles in 3D (not segmented edges).
-- **Rings (OFF state)**: rendered as dark gray tubes, subtle/muted, semi-transparent.
-- **Lighting**: ambient light + one or two point/directional lights for depth cues on spheres.
-- Optional: post-processing bloom pass (via Three.js `UnrealBloomPass`) for glowing ON rings.
+- **Reference**: [Wikipedia 16-cell stereographic projection](https://commons.wikimedia.org/wiki/File:Stereographic_polytope_16cell_colour.png).
+- Background: very dark (#0a0a0a), changes on win states (see Win Condition).
+- **Vertices**: `SphereGeometry` (radius 0.12), white with subtle emissive glow. Pointer cursor on canvas.
+- **Rings ON**: colored tube geometry with emissive glow (emissiveIntensity 0.5). Full opacity.
+- **Rings OFF**: gray (#888888) tube geometry, 70% opacity, no emissive.
+- **Lighting**: ambient (0.6) + directional (0.8) from (5, 5, 5).
+- Edges rendered as 48-segment arcs with tube radius 0.03.
 
 ### 3D Camera
-- Use `THREE.PerspectiveCamera`.
-- **No gimbal lock**: camera rotation must use quaternion-based or trackball-style controls — no Euler angle orbit that snaps or locks at poles.
-- Rotation should feel **uniform and smooth** in all directions — no detectable equator, no north/south pole behavior. The user should be able to drag continuously in any direction without resistance or discontinuity.
-- Recommended: custom trackball implementation or `THREE.TrackballControls` with **zoom disabled** (zoom is handled by UI buttons, scroll is reserved for 4D rotation).
-- The **4D rotation** (see Geometry section) is separate from 3D camera movement.
-- Default camera position: looking at the origin from a distance that frames the full projected polytope.
-- No auto-rotation. The view stays exactly where the player leaves it.
+- `THREE.PerspectiveCamera` (FOV 50).
+- Custom **trackball** implementation — quaternion-based, no gimbal lock.
+  - Rotation uses screen-space axis decomposition: horizontal drag rotates around camera's up vector, vertical drag rotates around camera's right vector.
+  - Uniform and smooth in all directions — no equator/pole artifacts.
+- Zoom via **UI buttons only** (not scroll — scroll is 4D rotation).
+- Initial 3D camera: offset by Euler(π/6, π/5, 0) so no vertex sits at screen center.
+- Camera distance range: 2–20, default 5.
+- No auto-rotation.
 
 ---
 
 ## Interaction
 
-### Mouse / Touch
-Two types of viewpoint changes:
+### Controls Summary
+| Input | Action |
+|-------|--------|
+| Mouse drag / single-finger swipe | 3D camera orbit (trackball) |
+| Mouse scroll / two-finger pinch | 4D rotation |
+| Click / tap vertex | Toggle rings through that vertex |
+| + / − buttons | Zoom in/out |
+| Scramble button | Randomize ring states |
+| Reset button | All rings OFF |
 
-1. **3D Camera Orbit** (standard 3D navigation):
-   - **Mouse drag** or **single-finger swipe** on touch screen.
-   - Rotates the 3D camera around the scene using trackball-style controls (quaternion-based, no gimbal lock).
-   - **Zoom is NOT on scroll/pinch** — scroll and pinch are reserved for 4D rotation (see below).
-   - Zoom is controlled via **"+" and "−" buttons** in the UI overlay. Moves the camera closer/farther from the origin.
+### Implementation Details
+- Click vs drag threshold: < 5px total movement = click.
+- Mouse: `mousedown`/`mousemove`/`mouseup`/`wheel` events.
+- Touch: `touchstart`/`touchmove`/`touchend` with `preventDefault()`.
+- Pinch detection: track distance between two touch points.
+- **Pinch → single-finger transition**: trackball is disabled during pinch and reset when transitioning to single finger to prevent viewport jumps.
+- Hit testing: `THREE.Raycaster` against vertex sphere meshes, pick closest intersection.
 
-2. **4D Rotation**:
-   - **Mouse scroll wheel** (up/down) or **two-finger pinch** on touch screen.
-   - Rotates the polytope in 4D so that the origin of the 3D view rotates towards/away from the viewer.
-   - Implementation: rotate in the plane spanned by the **current 3D camera view direction** and the **W axis**. This means the 4D rotation axis adapts to where the camera is looking.
-   - Scroll up / pinch out → rotate one direction; scroll down / pinch in → rotate the other.
-   - After rotation, re-project all 4D vertices via stereographic projection and rebuild the 3D geometry.
+---
 
-These two controls together provide full navigation of the 4D viewpoint.
+## Game State
 
-- Distinguish click vs drag by movement threshold (< 5px = click).
-- Handle both mouse events (`mousedown`/`mousemove`/`mouseup`/`wheel`) and touch events (`touchstart`/`touchmove`/`touchend` with gesture detection).
-- On touch, call `preventDefault()` to suppress browser scroll, zoom, and long-press menus during interaction with the canvas.
-- Detect pinch gesture by tracking distance between two touch points across `touchmove` events.
+### Rings and Spheres
+- **Game state lives on the rings.** Each ring is ON or OFF (boolean array).
+- **Clicking a vertex** toggles all rings passing through it.
+- **Vertices** have no state — they are click targets only.
+- Vertex-to-ring mapping computed at startup from polytope data.
 
-### Vertex Adjacency (16-cell)
-- Two vertices are adjacent if they are connected by an edge in the polytope.
-- On the 16-cell, each vertex is adjacent to 6 other vertices (all except its antipodal vertex).
-- Precompute the adjacency list for all 8 vertices at startup.
+### 16-cell Details
+- 6 rings (one per coordinate plane: XY, XZ, XW, YZ, YW, ZW).
+- Each vertex is on 3 rings → clicking toggles 3 rings.
+- 6 binary states, 8 possible moves.
 
-### Hit Testing
-- Use Three.js `Raycaster` to detect clicks on vertex sphere meshes.
-- On click, cast a ray from the camera through the click point; intersect with all vertex spheres.
-- Pick the closest intersected sphere.
+| Ring | Plane | Vertices |
+|------|-------|----------|
+| 0 | XY | +X, +Y, −X, −Y |
+| 1 | XZ | +X, +Z, −X, −Z |
+| 2 | XW | +X, +W, −X, −W |
+| 3 | YZ | +Y, +Z, −Y, −Z |
+| 4 | YW | +Y, +W, −Y, −W |
+| 5 | ZW | +Z, +W, −Z, −W |
 
-### Game State — Rings and Spheres
-- Each polytope's edges form a set of **rings** (great circles on S³).
-- **Game state lives on the rings.** Each ring is either ON or OFF.
-  - ON ring: rendered as a glowing tube in its **Hopf bundle color**.
-  - OFF ring: rendered as a dark gray tube, subtle/muted.
-- **Clicking a vertex (sphere)** toggles the ON/OFF state of all rings passing through that vertex.
-- **Vertices (spheres)** are always visible but carry no ON/OFF state themselves. They are interactive targets only.
+---
 
-### Polytope Data Format
-Each polytope is defined as a data object with the following structure:
+## Puzzle Logic
+
+### Flow
+1. Start: all rings OFF (solved state, blue background).
+2. **Scramble**: simulate N random vertex clicks (N=4 for 16-cell). Ensure at least one ring is ON.
+3. Player clicks vertices to toggle rings.
+4. **Win** when all rings are OFF (primary) or all ON (secondary).
+
+### Win Condition
+- **All OFF**: scene background → deep blue (#0a0a3a). Overlay: "Lights Out! 🎉" + move count.
+- **All ON**: scene background → warm amber (#3a2a0a). Overlay: "All Lit Up! ✨ Now try turning them all off!" + move count.
+- Background color syncs with ring state at all times (not just on win).
+- Overlay is translucent, non-blocking. Dismiss by tapping anywhere or pressing Scramble.
+
+### Reset
+- Sets all rings to OFF, resets move counter to 0, background turns blue.
+- Reinforces that all-OFF is the target state.
+
+---
+
+## Polytope Data Format
+
 ```js
 const POLYTOPE_16CELL = {
   name: "16-cell",
@@ -137,68 +153,20 @@ const POLYTOPE_16CELL = {
     { vertices: [0, 2, 1, 3], bundle: 0 },  // XY plane
     { vertices: [0, 4, 1, 5], bundle: 1 },  // XZ plane
     { vertices: [0, 6, 1, 7], bundle: 2 },  // XW plane
-    { vertices: [2, 4, 3, 5], bundle: 2 },  // YZ plane
-    { vertices: [2, 6, 3, 7], bundle: 1 },  // YW plane
-    { vertices: [4, 6, 5, 7], bundle: 0 },  // ZW plane
+    { vertices: [2, 4, 3, 5], bundle: 3 },  // YZ plane
+    { vertices: [2, 6, 3, 7], bundle: 4 },  // YW plane
+    { vertices: [4, 6, 5, 7], bundle: 5 },  // ZW plane
   ],
-  bundleColors: ["#ff3366", "#33ff66", "#3366ff"],
+  bundleColors: ["#ff3366", "#33ff66", "#3366ff", "#ffcc00", "#ff6633", "#cc33ff"],
 };
 ```
 
-- `vertices`: array of 4D coordinates (on unit S³).
-- `rings`: array of ring objects. Each ring has:
-  - `vertices`: ordered list of vertex indices forming the great circle cycle. Consecutive pairs (+ last→first) define edges.
-  - `bundle`: index into `bundleColors` for Hopf fibration color grouping.
-- `bundleColors`: array of hex colors for ON-state rings in each bundle.
-- Edges are **not listed separately** — derived from ring vertex order.
-- Vertex-to-ring mapping (which rings a vertex belongs to) is computed at startup from the ring data.
-
-### Polytopes Included in v1
-- **16-cell** only (data above). Ring and bundle assignments are known.
-- 24-cell and 600-cell deferred to future iterations. Their vertex coordinates are standard; ring membership and Hopf bundle assignments will be computed separately (e.g., via Mathematica) and added in the same data format.
-
-### 16-cell Rings (Starter Polytope)
-With vertices at (±1,0,0,0), (0,±1,0,0), (0,0,±1,0), (0,0,0,±1):
-| Ring | Plane | Vertices (indices) |
-|------|-------|--------------------|
-| 1 | XY | +X, +Y, −X, −Y |
-| 2 | XZ | +X, +Z, −X, −Z |
-| 3 | XW | +X, +W, −X, −W |
-| 4 | YZ | +Y, +Z, −Y, −Z |
-| 5 | YW | +Y, +W, −Y, −W |
-| 6 | ZW | +Z, +W, −Z, −W |
-
-Each vertex is on 3 rings. Clicking a vertex toggles 3 rings. 6 binary states, 8 possible moves.
-
----
-
-## Puzzle Logic
-
-### Initial State
-- **New Game**: start from the solved state where **all rings are OFF**.
-- The program then **simulates N random vertex clicks** to scramble the rings into a random ON/OFF state. This guarantees the puzzle is always solvable (every scramble can be reversed).
-- The scramble clicks are animated or happen instantly (TBD), then the player takes over.
-- Difficulty scales with the polytope:
-  - 16-cell (6 rings): ~3–4 random clicks.
-  - 24-cell (16 rings): ~6–8 random clicks.
-  - 600-cell (72 rings): ~15–20 random clicks.
-
-### Win Condition
-- **Primary win (All OFF)**: all rings are gray → background briefly pulses to a deep blue (#0a0a3a), then a centered message fades in: "Lights Out! 🎉" with move count.
-- **Secondary win (All ON)**: all rings are lit → background briefly pulses to a warm amber (#3a2a0a), then a centered message fades in: "All Lit Up! ✨ Now try turning them all off!" with move count.
-- Both celebrations:
-  - Background color shift is subtle and temporary (fades back after a few seconds or stays until dismissed).
-  - Message overlay is minimal — translucent, centered text over the scene (not a blocking modal). The polytope remains visible behind it.
-  - Show "Scramble" button to play again.
-  - The player can dismiss the message by tapping anywhere or clicking the Scramble button.
-
-### Polytope Selector
-- A dropdown or button group to switch between polytopes.
-- v1: only 16-cell available. UI element present but other options disabled/hidden until data is added.
-- Switching polytopes starts a new game with the selected polytope.
-
-### Move Counter
-- Display current move count in the corner.
+- `vertices`: 4D coords on unit S³.
+- `rings[].vertices`: ordered vertex indices forming a great circle. Consecutive pairs + wrap = edges.
+- `rings[].bundle`: color group index. v1 uses unique per ring; future Hopf fibration grouping.
+- `bundleColors`: hex colors for ON-state rings.
+- To add a new polytope: create a new data object in the same format with vertex coordinates, ring membership, and bundle assignments.
+- 24-cell and 600-cell vertex coordinates are standard. Ring membership and Hopf bundle assignments to be computed via Mathematica.
 
 ---
 
@@ -208,40 +176,50 @@ Each vertex is on 3 rings. Clicking a vertex toggles 3 rings. 6 binary states, 8
 - Full-viewport canvas.
 - Minimal overlay (top-right corner):
   - Move counter
-  - "Scramble" button — applies random vertex clicks to scramble the rings from current state (or from all-OFF)
-  - "Reset" button — restores all rings to OFF (the solved state), reinforcing to the player that all-OFF is the goal. Resets the move counter to 0.
-  - "+" / "−" zoom buttons — move camera closer/farther from the origin
-  - Polytope selector (16-cell / 24-cell / 600-cell)
-- Win overlay: centered modal with congratulations message, move count, new game button.
+  - "Scramble" button
+  - "Reset" button
+  - "+" / "−" zoom buttons
+  - Polytope selector (future — only 16-cell in v1)
+- Win overlay: centered translucent text over the scene.
 
 ### Responsive
-- Canvas resizes with window (listen to `resize` event, update canvas dimensions and re-render).
-- Works in both portrait and landscape orientations on mobile.
-- The projected polytope scales to fill available space — adjust camera distance or FOV based on viewport.
-- All overlay buttons/text must be at least **44×44px** touch targets (Apple HIG / Android minimum).
-- UI overlay text and buttons should use responsive font sizes (e.g., `clamp()` or viewport units).
+- Canvas resizes with window.
+- Works in portrait and landscape on mobile.
+- All buttons ≥ 44×44px touch targets.
+- Responsive font sizes via `clamp()`.
 
 ---
 
 ## File Structure
 ```
-index.html        ← entry point
-*.js / *.css      ← additional files as needed for clean separation
+index.html              ← entry point
+css/
+  style.css             ← UI overlay styles
+src/
+  main.js               ← bootstrap, wires everything together
+  polytopes.js          ← polytope data (16-cell)
+  math4d.js             ← 4D rotation, stereographic projection, great circle arcs
+  rendering.js          ← Three.js scene, ring tubes, vertex spheres
+  controls.js           ← trackball camera, 4D rotation controller, raycaster
+  game.js               ← game state, toggle, scramble, reset, win detection
+spec.md                 ← this file
+.github/
+  copilot-instructions.md
 ```
-Load Three.js from CDN — no local node_modules or build step required.
 
 ---
 
 ## Deployment
-- Hosted as a **static site on GitHub Pages**.
-- No backend, no server-side logic, no network requests (beyond CDN loads).
-- All assets loaded from CDN (Three.js) or inlined.
-- The repository root should be deployable directly (index.html at root).
+- Hosted as a **static site on GitHub Pages** from `main` branch root.
+- No backend, no server-side logic.
+- Three.js loaded from CDN (unpkg.com). No node_modules or build step.
+- Repo: https://github.com/nanma80/lights_out_4d
 
 ---
 
-## Out of Scope
-- Saving game state (no localStorage for v1).
+## Out of Scope (v1)
+- Saving game state (no localStorage).
 - Sound effects.
-- Undo button (may add later).
+- Undo button.
 - Solving hints.
+- Bloom/post-processing effects.
