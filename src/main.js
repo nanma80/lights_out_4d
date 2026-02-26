@@ -1,6 +1,6 @@
 // main.js — Entry point, wires everything together
 
-import { POLYTOPE_16CELL } from './polytopes.js';
+import { POLYTOPE_16CELL, POLYTOPE_24CELL, POLYTOPE_600CELL } from './polytopes.js';
 import { rotate4D } from './math4d.js';
 import { Renderer } from './rendering.js';
 import { Trackball, Rotation4D, ClickHandler } from './controls.js';
@@ -17,6 +17,13 @@ const winMessage = document.getElementById('win-message');
 const winMoves = document.getElementById('win-moves');
 const winScrambleBtn = document.getElementById('win-scramble');
 const hintOverlay = document.getElementById('hint-overlay');
+const polytopeSelect = document.getElementById('polytope-select');
+
+const POLYTOPES = {
+  '16-cell': POLYTOPE_16CELL,
+  '24-cell': POLYTOPE_24CELL,
+  '600-cell': POLYTOPE_600CELL,
+};
 
 // State
 let currentPolytope = POLYTOPE_16CELL;
@@ -29,8 +36,23 @@ function getRotatedVertices() {
 
 function rebuildScene() {
   rotatedVertices = getRotatedVertices();
-  renderer.buildPolytope(currentPolytope, rotatedVertices, game.ringStates);
+  renderer.buildPolytope(currentPolytope, rotatedVertices, game.ringStates, trackball.getCameraDistance());
   clickHandler.updateMeshes(renderer.vertexMeshes);
+}
+
+function scrambleCount() {
+  return 100;
+}
+
+function switchPolytope(name) {
+  currentPolytope = POLYTOPES[name];
+  game = new Game(currentPolytope);
+  game.onStateChange = updateVisuals;
+  game.onWin = showWin;
+  rotation4d.setCenterRotation(currentPolytope.cellCenter);
+  hideWin();
+  rebuildScene();
+  game.scramble(scrambleCount());
 }
 
 function updateVisuals() {
@@ -70,7 +92,7 @@ function hideWin() {
 function init() {
   renderer = new Renderer(container);
   trackball = new Trackball(renderer.camera, renderer.domElement);
-  rotation4d = new Rotation4D();
+  rotation4d = new Rotation4D(currentPolytope.cellCenter);
   game = new Game(currentPolytope);
 
   clickHandler = new ClickHandler(
@@ -176,9 +198,13 @@ function init() {
   });
 
   // UI buttons
+  polytopeSelect.addEventListener('change', (e) => {
+    switchPolytope(e.target.value);
+  });
+
   scrambleBtn.addEventListener('click', () => {
     hideWin();
-    game.scramble(4);
+    game.scramble(scrambleCount());
   });
 
   resetBtn.addEventListener('click', () => {
@@ -186,12 +212,12 @@ function init() {
     game.reset();
   });
 
-  zoomInBtn.addEventListener('click', () => trackball.zoom(-0.5));
-  zoomOutBtn.addEventListener('click', () => trackball.zoom(0.5));
+  zoomInBtn.addEventListener('click', () => { trackball.zoom(-0.5); rebuildScene(); });
+  zoomOutBtn.addEventListener('click', () => { trackball.zoom(0.5); rebuildScene(); });
 
   winScrambleBtn.addEventListener('click', () => {
     hideWin();
-    game.scramble(4);
+    game.scramble(scrambleCount());
   });
 
   winOverlay.addEventListener('click', (e) => {
@@ -200,7 +226,7 @@ function init() {
 
   // Initial state
   rebuildScene();
-  game.scramble(4);
+  game.scramble(scrambleCount());
 
   // Animation loop
   function animate() {

@@ -129,8 +129,12 @@ class Trackball {
   }
 
   zoom(delta) {
-    this._cameraDistance = Math.max(2, Math.min(20, this._cameraDistance + delta));
+    this._cameraDistance = Math.max(0.5, Math.min(20, this._cameraDistance + delta));
     this._updateCamera();
+  }
+
+  getCameraDistance() {
+    return this._cameraDistance;
   }
 
   // Get camera view direction (normalized, pointing from camera to origin)
@@ -143,16 +147,47 @@ class Trackball {
 
 // 4D rotation controller — scroll/pinch drives rotation in (viewDir, W) plane
 class Rotation4D {
-  constructor() {
-    // Start from a symmetrical 4D viewpoint: rotate cell center (1,1,1,1)/2 onto the W axis
+  constructor(cellCenter) {
     this.matrix = identity4D();
-    // Sequential rotations: XW, YW, ZW to map (1,1,1,1)/2 → (0,0,0,1)
-    const initXW = rotationMatrix4D(0, 3, Math.PI / 4);
-    const initYW = rotationMatrix4D(1, 3, Math.atan(1 / Math.sqrt(2)));
-    const initZW = rotationMatrix4D(2, 3, Math.PI / 6);
-    this.matrix = multiplyMatrices4D(initZW, multiplyMatrices4D(initYW, multiplyMatrices4D(initXW, this.matrix)));
+    this.setCenterRotation(cellCenter || [0.5, 0.5, 0.5, 0.5]);
     this.rotationSpeed = 0.05;
     this.onChange = null;
+  }
+
+  // Compute rotation that maps cellCenter to (0,0,0,1) via sequential XW, YW, ZW rotations
+  setCenterRotation(cellCenter) {
+    this.matrix = identity4D();
+    let p = [...cellCenter];
+
+    // XW rotation to zero out x
+    if (Math.abs(p[0]) > 1e-10) {
+      const angle = Math.atan2(p[0], p[3]);
+      const m = rotationMatrix4D(0, 3, angle);
+      this.matrix = multiplyMatrices4D(m, this.matrix);
+      // Update p
+      const c = Math.cos(angle), s = Math.sin(angle);
+      const newX = p[0] * c - p[3] * s;
+      const newW = p[0] * s + p[3] * c;
+      p[0] = newX; p[3] = newW;
+    }
+
+    // YW rotation to zero out y
+    if (Math.abs(p[1]) > 1e-10) {
+      const angle = Math.atan2(p[1], p[3]);
+      const m = rotationMatrix4D(1, 3, angle);
+      this.matrix = multiplyMatrices4D(m, this.matrix);
+      const c = Math.cos(angle), s = Math.sin(angle);
+      const newY = p[1] * c - p[3] * s;
+      const newW = p[1] * s + p[3] * c;
+      p[1] = newY; p[3] = newW;
+    }
+
+    // ZW rotation to zero out z
+    if (Math.abs(p[2]) > 1e-10) {
+      const angle = Math.atan2(p[2], p[3]);
+      const m = rotationMatrix4D(2, 3, angle);
+      this.matrix = multiplyMatrices4D(m, this.matrix);
+    }
   }
 
   // Rotate in the plane spanned by a 3D view direction and the W axis

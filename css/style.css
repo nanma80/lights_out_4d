@@ -45,11 +45,12 @@ body.win-on {
   top: 0;
   left: 0;
   width: 100%;
-  padding: clamp(16px, 4vw, 32px) 0;
+  height: 100%;
+  padding: 15vh 16px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   z-index: 15;
   pointer-events: none;
   opacity: 1;
@@ -62,33 +63,34 @@ body.win-on {
 
 #hint-title {
   color: rgba(255, 255, 255, 0.85);
-  font-size: clamp(20px, 5vw, 32px);
+  font-size: clamp(24px, 7vw, 36px);
   font-weight: 700;
   letter-spacing: 0.05em;
 }
 
 #hint-text {
   color: rgba(255, 255, 255, 0.6);
-  font-size: clamp(13px, 3vw, 18px);
+  font-size: clamp(15px, 4vw, 20px);
 }
 
 #hint-subtext {
   color: rgba(255, 255, 255, 0.35);
-  font-size: clamp(11px, 2.5vw, 14px);
+  font-size: clamp(13px, 3vw, 16px);
 }
 
 /* UI Overlay */
 #ui-overlay {
   position: absolute;
-  top: 0;
+  bottom: 0;
   right: 0;
   padding: clamp(8px, 2vw, 16px);
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: stretch;
   gap: clamp(6px, 1.5vw, 12px);
   pointer-events: none;
   z-index: 10;
+  width: clamp(100px, 25vw, 140px);
 }
 
 #ui-overlay > * {
@@ -100,6 +102,7 @@ body.win-on {
   font-size: clamp(12px, 2.5vw, 16px);
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  text-align: right;
 }
 
 #move-count {
@@ -107,6 +110,7 @@ body.win-on {
   font-size: clamp(24px, 5vw, 36px);
   font-weight: 700;
   line-height: 1;
+  text-align: right;
 }
 
 .ui-btn {
@@ -135,6 +139,18 @@ body.win-on {
   background: rgba(255, 255, 255, 0.2);
 }
 
+#polytope-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.08) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23fff'/%3E%3C/svg%3E") no-repeat right 8px center;
+  padding: 8px 24px 8px 8px;
+}
+
+#polytope-select option {
+  background: #1a1a1a;
+  color: #fff;
+}
+
 .zoom-controls {
   display: flex;
   gap: 4px;
@@ -149,6 +165,18 @@ body.win-on {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Author */
+#author {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  padding: clamp(8px, 2vw, 16px);
+  color: rgba(255, 255, 255, 0.2);
+  font-size: clamp(10px, 2vw, 12px);
+  pointer-events: none;
+  z-index: 10;
 }
 
 /* Win Overlay */

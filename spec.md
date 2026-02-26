@@ -173,7 +173,35 @@ const POLYTOPE_16CELL = {
 - `rings[].bundle`: color group index. v1 uses unique per ring; future Hopf fibration grouping.
 - `bundleColors`: hex colors for ON-state rings.
 - To add a new polytope: create a new data object in the same format with vertex coordinates, ring membership, and bundle assignments.
-- 24-cell and 600-cell vertex coordinates are standard. Ring membership and Hopf bundle assignments to be computed via Mathematica.
+
+### Polytope Data Generation Procedure
+
+The following algorithm generates ring and bundle data from vertex coordinates. It applies to any regular 4D polytope whose edges form great-circle rings on S³.
+
+**Input**: vertex coordinates on the unit 3-sphere S³.
+
+**Step 1 — Edge discovery**:
+1. Pick any vertex V₀. Compute the inner product of V₀ with every other vertex. The largest inner product (excluding self, which is 1) is the edge threshold `max_ip`.
+2. Enumerate all unordered pairs of vertices. A pair (Vᵢ, Vⱼ) is an edge if `dot(Vᵢ, Vⱼ) ≈ max_ip` (within floating-point tolerance).
+3. Store edges as a set of unordered index pairs.
+
+**Step 2 — Ring tracing via reflection**:
+1. Maintain a set of unused edges. Pick any unused edge (A, B) to start a new ring.
+2. Compute the next vertex by reflecting A through B's axis on S³:
+   - `projection = B × dot(A, B) / dot(B, B)`
+   - `reflected = 2 × projection − A`
+   - Match `reflected` to the nearest vertex index (within tolerance).
+3. The next edge is (B, reflected). Mark edge (A, B) as used. Advance: A ← B, B ← reflected.
+4. Repeat until returning to the starting edge. Record the ordered vertex sequence as one ring.
+5. Repeat from step 1 until all edges are consumed.
+6. **Validation**: confirm the expected ring count (e.g., 16 for 24-cell, 72 for 600-cell) and that each ring has the expected vertex count (6 for 24-cell, 10 for 600-cell).
+
+**Step 3 — Bundle assignment (Hopf fibration)**:
+1. Two rings belong to the same bundle if and only if they share no vertices.
+2. Start with the first unassigned ring. Find all other rings that share no vertices with it — these form a candidate bundle.
+3. Verify that all rings within the candidate bundle are pairwise vertex-disjoint.
+4. Assign the bundle index and repeat for remaining unassigned rings.
+5. **Validation**: confirm all bundles have equal size (e.g., 4 bundles × 4 rings for 24-cell) and that rings within each bundle are fully vertex-disjoint.
 
 ---
 

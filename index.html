@@ -26,15 +26,20 @@
   </div>
 
   <div id="ui-overlay">
-    <div class="ui-label">Moves</div>
-    <div id="move-count">0</div>
+    <button class="ui-btn zoom-btn" id="btn-zoom-in">+</button>
+    <button class="ui-btn zoom-btn" id="btn-zoom-out">−</button>
     <button class="ui-btn" id="btn-scramble">Scramble</button>
     <button class="ui-btn" id="btn-reset">Reset</button>
-    <div class="zoom-controls">
-      <button class="ui-btn zoom-btn" id="btn-zoom-in">+</button>
-      <button class="ui-btn zoom-btn" id="btn-zoom-out">−</button>
-    </div>
+    <select class="ui-btn" id="polytope-select">
+      <option value="16-cell">16-cell</option>
+      <option value="24-cell">24-cell</option>
+      <option value="600-cell">600-cell</option>
+    </select>
+    <div class="ui-label">Moves</div>
+    <div id="move-count">0</div>
   </div>
+
+  <div id="author">Nan Ma · 2026</div>
 
   <div id="win-overlay">
     <div id="win-message"></div>

@@ -9,6 +9,7 @@ const VERTEX_COLOR = 0xffffff;
 const VERTEX_RADIUS = 0.12;
 const RING_TUBE_RADIUS = 0.03;
 const ARC_SEGMENTS = 48;
+const DEFAULT_CAMERA_DISTANCE = 5;
 
 export class Renderer {
   constructor(container) {
@@ -61,18 +62,22 @@ export class Renderer {
   }
 
   // Build meshes for a polytope with given 4D rotation applied
-  buildPolytope(polytope, rotatedVertices4D, ringStates) {
+  buildPolytope(polytope, rotatedVertices4D, ringStates, cameraDistance) {
     // Clear existing
     this.ringGroup.clear();
     this.vertexGroup.clear();
     this.vertexMeshes = [];
     this.ringMeshes = [];
 
+    const scale = (cameraDistance || DEFAULT_CAMERA_DISTANCE) / DEFAULT_CAMERA_DISTANCE;
+    const vertexRadius = VERTEX_RADIUS * scale;
+    const tubeRadius = RING_TUBE_RADIUS * scale;
+
     // Project vertices
     const projected = rotatedVertices4D.map(v => stereographicProject(v));
 
     // Build vertex spheres
-    const sphereGeo = new THREE.SphereGeometry(VERTEX_RADIUS, 16, 16);
+    const sphereGeo = new THREE.SphereGeometry(vertexRadius, 16, 16);
     const vertexMat = new THREE.MeshPhongMaterial({
       color: VERTEX_COLOR,
       emissive: 0x444444,
@@ -113,7 +118,7 @@ export class Renderer {
           arcPoints3D.map(p => new THREE.Vector3(p[0], p[1], p[2]))
         );
 
-        const tubeGeo = new THREE.TubeGeometry(curve, ARC_SEGMENTS, RING_TUBE_RADIUS, 8, false);
+        const tubeGeo = new THREE.TubeGeometry(curve, ARC_SEGMENTS, tubeRadius, 8, false);
         const tubeMat = new THREE.MeshPhongMaterial({
           color: color,
           transparent: !isOn,
