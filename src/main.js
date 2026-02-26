@@ -80,7 +80,13 @@ function showWin(type) {
     document.getElementById('win-subtitle').textContent = 'Now try turning them all off!';
   }
   winMoves.textContent = `Moves: ${game.moveCount}`;
+  winScrambleBtn.style.visibility = 'hidden';
   winOverlay.classList.add('visible');
+  winOverlay.style.pointerEvents = 'none';
+  setTimeout(() => {
+    winOverlay.style.pointerEvents = '';
+    winScrambleBtn.style.visibility = '';
+  }, 1000);
 }
 
 function hideWin() {

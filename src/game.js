@@ -35,7 +35,7 @@ export class Game {
         this.ringStates[ri] = !this.ringStates[ri];
       });
     }
-    if (this.ringStates.every(s => !s)) {
+    if (this.ringStates.every(s => !s) || this.ringStates.every(s => s)) {
       return this.scramble(numClicks);
     }
     this.moveCount = 0;
