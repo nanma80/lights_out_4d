@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Lights Out 4D</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="ui-overlay">
+    <div class="ui-label">Moves</div>
+    <div id="move-count">0</div>
+    <button class="ui-btn" id="btn-scramble">Scramble</button>
+    <button class="ui-btn" id="btn-reset">Reset</button>
+    <div class="zoom-controls">
+      <button class="ui-btn zoom-btn" id="btn-zoom-in">+</button>
+      <button class="ui-btn zoom-btn" id="btn-zoom-out">−</button>
+    </div>
+  </div>
+
+  <div id="win-overlay">
+    <div id="win-message"></div>
+    <div id="win-subtitle"></div>
+    <div id="win-moves"></div>
+    <button class="ui-btn" id="win-scramble">Scramble Again</button>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
