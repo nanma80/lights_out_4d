@@ -16,6 +16,7 @@ const winOverlay = document.getElementById('win-overlay');
 const winMessage = document.getElementById('win-message');
 const winMoves = document.getElementById('win-moves');
 const winScrambleBtn = document.getElementById('win-scramble');
+const hintOverlay = document.getElementById('hint-overlay');
 
 // State
 let currentPolytope = POLYTOPE_16CELL;
@@ -78,6 +79,7 @@ function init() {
     [],
     (vertexIndex) => {
       hideWin();
+      if (hintOverlay) hintOverlay.classList.add('hidden');
       game.clickVertex(vertexIndex);
       updateVisuals();
     }

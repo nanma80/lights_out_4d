@@ -36,6 +36,44 @@ body.win-on {
   cursor: pointer;
 }
 
+/* Hint Overlay */
+#hint-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: clamp(16px, 4vw, 32px) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 15;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.8s ease;
+}
+
+#hint-overlay.hidden {
+  opacity: 0;
+}
+
+#hint-title {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: clamp(20px, 5vw, 32px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+#hint-text {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: clamp(13px, 3vw, 18px);
+}
+
+#hint-subtext {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: clamp(11px, 2.5vw, 14px);
+}
+
 /* UI Overlay */
 #ui-overlay {
   position: absolute;
