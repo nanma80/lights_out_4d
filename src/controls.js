@@ -20,7 +20,7 @@ class Trackball {
     this._quaternion = new THREE.Quaternion();
     // Start with a 3D rotation so no vertex sits dead-center
     const initRot = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(Math.PI / 6, Math.PI / 5, 0)
+      new THREE.Euler(Math.PI / 2.75, Math.PI / 4, 0)
     );
     this._quaternion.copy(initRot);
     this._updateCamera();
@@ -144,14 +144,13 @@ class Trackball {
 // 4D rotation controller — scroll/pinch drives rotation in (viewDir, W) plane
 class Rotation4D {
   constructor() {
-    // Start from a non-degenerate 4D viewpoint by applying initial rotations
+    // Start from a symmetrical 4D viewpoint: rotate cell center (1,1,1,1)/2 onto the W axis
     this.matrix = identity4D();
-    // Use angles that ensure no vertex has w close to 1 (which projects to 3D origin)
-    const initXW = rotationMatrix4D(0, 3, 0.4);
-    const initYW = rotationMatrix4D(1, 3, 0.3);
-    const initZW = rotationMatrix4D(2, 3, 0.2);
-    const initXY = rotationMatrix4D(0, 1, 0.15);
-    this.matrix = multiplyMatrices4D(initXY, multiplyMatrices4D(initZW, multiplyMatrices4D(initYW, multiplyMatrices4D(initXW, this.matrix))));
+    // Sequential rotations: XW, YW, ZW to map (1,1,1,1)/2 → (0,0,0,1)
+    const initXW = rotationMatrix4D(0, 3, Math.PI / 4);
+    const initYW = rotationMatrix4D(1, 3, Math.atan(1 / Math.sqrt(2)));
+    const initZW = rotationMatrix4D(2, 3, Math.PI / 6);
+    this.matrix = multiplyMatrices4D(initZW, multiplyMatrices4D(initYW, multiplyMatrices4D(initXW, this.matrix)));
     this.rotationSpeed = 0.05;
     this.onChange = null;
   }
