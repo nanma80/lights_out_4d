@@ -40,6 +40,7 @@
   </div>
 
   <div id="author">Nan Ma · 2026</div>
+  <div id="debug-overlay" style="display:none;position:fixed;top:0;left:0;color:lime;background:rgba(0,0,0,0.7);font:11px monospace;padding:4px 8px;z-index:9999;pointer-events:none;white-space:pre"></div>
 
   <div id="win-overlay">
     <div id="win-message"></div>
@@ -48,6 +49,16 @@
     <button class="ui-btn" id="win-scramble">Scramble Again</button>
   </div>
 
-  <script type="module" src="src/main.js"></script>
+  <script>
+    window.onerror = function(msg, src, line, col, err) {
+      var d = document.getElementById('debug-overlay');
+      if (d && d.style.display !== 'none') d.textContent = 'ERR: ' + msg + '\n' + src + ':' + line;
+    };
+    window.addEventListener('unhandledrejection', function(e) {
+      var d = document.getElementById('debug-overlay');
+      if (d && d.style.display !== 'none') d.textContent = 'REJ: ' + e.reason;
+    });
+  </script>
+  <script type="module" src="src/main.js?v=10"></script>
 </body>
 </html>

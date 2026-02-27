@@ -6,12 +6,20 @@
 export function stereographicProject(point4d) {
   const [x, y, z, w] = point4d;
   const denom = 1 + w;
+  const MAX_RADIUS = 100;
   if (Math.abs(denom) < 1e-10) {
-    // Point near south pole projects to infinity — clamp to large value
-    const scale = 1e4;
-    return [x * scale, y * scale, z * scale];
+    const len = Math.sqrt(x * x + y * y + z * z);
+    if (len < 1e-10) return [MAX_RADIUS, 0, 0];
+    const s = MAX_RADIUS / len;
+    return [x * s, y * s, z * s];
   }
-  return [x / denom, y / denom, z / denom];
+  const projected = [x / denom, y / denom, z / denom];
+  const r2 = projected[0] ** 2 + projected[1] ** 2 + projected[2] ** 2;
+  if (r2 > MAX_RADIUS * MAX_RADIUS) {
+    const s = MAX_RADIUS / Math.sqrt(r2);
+    return [projected[0] * s, projected[1] * s, projected[2] * s];
+  }
+  return projected;
 }
 
 // Apply a 4x4 rotation matrix to a 4D point

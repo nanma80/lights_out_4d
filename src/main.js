@@ -1,10 +1,10 @@
 // main.js — Entry point, wires everything together
 
-import { POLYTOPE_16CELL, POLYTOPE_24CELL, POLYTOPE_600CELL } from './polytopes.js';
-import { rotate4D } from './math4d.js';
-import { Renderer } from './rendering.js';
-import { Trackball, Rotation4D, ClickHandler } from './controls.js';
-import { Game } from './game.js';
+import { POLYTOPE_16CELL, POLYTOPE_24CELL, POLYTOPE_600CELL } from './polytopes.js?v=10';
+import { rotate4D } from './math4d.js?v=10';
+import { Renderer } from './rendering.js?v=10';
+import { Trackball, Rotation4D, ClickHandler } from './controls.js?v=10';
+import { Game } from './game.js?v=10';
 
 const container = document.getElementById('canvas-container');
 const moveCountEl = document.getElementById('move-count');
@@ -112,8 +112,10 @@ function init() {
   game.onStateChange = updateVisuals;
   game.onWin = showWin;
 
+  let sceneDirty = false;
+
   rotation4d.onChange = () => {
-    rebuildScene();
+    sceneDirty = true;
   };
 
   // Unified click detection for mouse and touch
@@ -251,10 +253,31 @@ function init() {
   rebuildScene();
   game.scramble();
 
+  // Debug overlay (activate with ?debug=true)
+  const debugEnabled = new URLSearchParams(window.location.search).has('debug');
+  const debugEl = document.getElementById('debug-overlay');
+  if (debugEnabled && debugEl) debugEl.style.display = '';
+  let lastDebugUpdate = 0;
+
   // Animation loop
   function animate() {
     requestAnimationFrame(animate);
+    if (sceneDirty) {
+      rebuildScene();
+      sceneDirty = false;
+    }
     renderer.render();
+
+    if (debugEnabled) {
+      const now = performance.now();
+      if (now - lastDebugUpdate > 500) {
+        lastDebugUpdate = now;
+        const info = renderer.renderer.info;
+        debugEl.textContent =
+          `Geo: ${info.memory.geometries}  Tex: ${info.memory.textures}\n` +
+          `Tris: ${info.render.triangles}  Calls: ${info.render.calls}`;
+      }
+    }
   }
   animate();
 }

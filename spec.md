@@ -17,8 +17,8 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 | Polytope | Vertices | Edges | Rings | Vertices/Ring | Edges/Ring | Status      |
 |----------|----------|-------|-------|---------------|------------|-------------|
 | 16-cell  | 8        | 24    | 6     | 4             | 4          | Implemented |
-| 24-cell  | 24       | 96    | 16    | 6             | 6          | Future      |
-| 600-cell | 120      | 720   | 72    | 10            | 10         | Future      |
+| 24-cell  | 24       | 96    | 16    | 6             | 6          | Implemented |
+| 600-cell | 120      | 720   | 72    | 10            | 10         | Implemented |
 
 - Each polytope is defined as a data object (see Polytope Data Format below). Adding a new polytope = adding a new data file.
 
@@ -59,6 +59,8 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 - **Rings OFF**: gray (#888888) tube geometry, 70% opacity, no emissive.
 - **Lighting**: ambient (0.6) + directional (0.8) from (5, 5, 5).
 - Edges rendered as 48-segment arcs with tube radius 0.03.
+- **Geometry pooling**: vertex spheres and edge tubes are allocated once into pools and reused across rebuilds by updating buffer attributes in-place. This avoids GPU memory leaks on Safari/iOS where `BufferGeometry.dispose()` doesn't reliably free resources.
+- 4D rotation events are coalesced via a dirty flag and processed once per animation frame.
 
 ### 3D Camera
 - `THREE.PerspectiveCamera` (FOV 50).
@@ -123,7 +125,7 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 
 ### Flow
 1. Start: all rings OFF (solved state, blue background). Auto-scramble on first load.
-2. **Scramble**: simulate N random vertex clicks (N=4 for 16-cell). Ensure at least one ring is ON. Enters **challenge mode**.
+2. **Scramble**: iterate through every vertex, clicking each with 50% probability. Retry if result is all-ON or all-OFF. Enters **challenge mode**.
 3. Player clicks vertices to toggle rings.
 4. **Win** when all rings are OFF (primary) or all ON (secondary). Win popup shows **only once** per scramble.
 5. After winning, the player can continue clicking (exploration) but no further win popups until next scramble.
@@ -140,8 +142,9 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 - Overlay is translucent, non-blocking. Dismiss by tapping anywhere or pressing Scramble.
 
 ### Reset
+- In **challenge mode**, Reset requires confirmation: first click changes button to "Sure?" (muted gold text and border); a second click within 3 seconds confirms. Reverts after 3 seconds if unconfirmed.
+- Outside challenge mode, Reset works immediately with one click.
 - Sets all rings to OFF, resets move counter to 0, background turns blue.
-- Reinforces that all-OFF is the target state.
 
 ---
 
@@ -214,7 +217,7 @@ The following algorithm generates ring and bundle data from vertex coordinates. 
   - "Scramble" button
   - "Reset" button
   - "+" / "−" zoom buttons
-  - Polytope selector (future — only 16-cell in v1)
+  - Polytope selector (dropdown: 16-cell, 24-cell, 600-cell)
 - Win overlay: centered translucent text over the scene.
 
 ### Responsive
@@ -222,6 +225,11 @@ The following algorithm generates ring and bundle data from vertex coordinates. 
 - Works in portrait and landscape on mobile.
 - All buttons ≥ 44×44px touch targets.
 - Responsive font sizes via `clamp()`.
+
+### Debug Overlay
+- Hidden by default. Activated by adding `?debug` to the URL.
+- Shows Three.js geometry count, texture count, triangle count, and draw calls.
+- Also catches and displays uncaught JS errors and unhandled promise rejections.
 
 ---
 
