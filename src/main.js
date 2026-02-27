@@ -240,6 +240,19 @@ function init() {
   zoomInBtn.addEventListener('click', () => { trackball.zoom(-0.5); rebuildScene(); });
   zoomOutBtn.addEventListener('click', () => { trackball.zoom(0.5); rebuildScene(); });
 
+  // Debug: cycle through bundles
+  let debugBundleIdx = -1;
+  const debugBundleBtn = document.getElementById('btn-debug-bundle');
+  debugBundleBtn.addEventListener('click', () => {
+    const numBundles = currentPolytope.bundleColors.length;
+    debugBundleIdx = (debugBundleIdx + 1) % numBundles;
+    currentPolytope.rings.forEach((ring, ri) => {
+      game.ringStates[ri] = ring.bundle === debugBundleIdx;
+    });
+    debugBundleBtn.textContent = `B${debugBundleIdx}`;
+    updateVisuals();
+  });
+
   winScrambleBtn.addEventListener('click', () => {
     hideWin();
     game.scramble();
@@ -253,10 +266,13 @@ function init() {
   rebuildScene();
   game.scramble();
 
-  // Debug overlay (activate with ?debug=true)
+  // Debug mode (activate with ?debug)
   const debugEnabled = new URLSearchParams(window.location.search).has('debug');
   const debugEl = document.getElementById('debug-overlay');
-  if (debugEnabled && debugEl) debugEl.style.display = '';
+  if (debugEnabled) {
+    if (debugEl) debugEl.style.display = '';
+    debugBundleBtn.style.display = '';
+  }
   let lastDebugUpdate = 0;
 
   // Animation loop
