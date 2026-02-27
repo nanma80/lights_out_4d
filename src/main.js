@@ -213,7 +213,28 @@ function init() {
     game.scramble(scrambleCount());
   });
 
+  let resetConfirming = false;
+  let resetTimeout = null;
+
+  function clearResetConfirm() {
+    resetConfirming = false;
+    resetBtn.textContent = 'Reset';
+    resetBtn.style.color = '';
+    resetBtn.style.borderColor = '';
+    resetTimeout = null;
+  }
+
   resetBtn.addEventListener('click', () => {
+    if (game.isChallenge && !resetConfirming) {
+      resetConfirming = true;
+      resetBtn.textContent = 'Sure?';
+      resetBtn.style.color = '#e0c060';
+      resetBtn.style.borderColor = '#e0c060';
+      resetTimeout = setTimeout(clearResetConfirm, 3000);
+      return;
+    }
+    if (resetTimeout) clearTimeout(resetTimeout);
+    clearResetConfirm();
     hideWin();
     game.reset();
   });
