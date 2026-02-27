@@ -25,18 +25,19 @@ export class Game {
     if (this.isChallenge && !this.hasWon) this.checkWin();
   }
 
-  scramble(numClicks) {
+  scramble() {
     this.reset();
     const numVertices = this.polytope.vertices.length;
-    for (let i = 0; i < numClicks; i++) {
-      const vi = Math.floor(Math.random() * numVertices);
-      const ringIndices = this.vertexToRings[vi];
-      ringIndices.forEach(ri => {
-        this.ringStates[ri] = !this.ringStates[ri];
-      });
+    for (let vi = 0; vi < numVertices; vi++) {
+      if (Math.random() < 0.5) {
+        const ringIndices = this.vertexToRings[vi];
+        ringIndices.forEach(ri => {
+          this.ringStates[ri] = !this.ringStates[ri];
+        });
+      }
     }
     if (this.ringStates.every(s => !s) || this.ringStates.every(s => s)) {
-      return this.scramble(numClicks);
+      return this.scramble();
     }
     this.moveCount = 0;
     this.isChallenge = true;

@@ -40,10 +40,6 @@ function rebuildScene() {
   clickHandler.updateMeshes(renderer.vertexMeshes);
 }
 
-function scrambleCount() {
-  return 100;
-}
-
 function switchPolytope(name) {
   currentPolytope = POLYTOPES[name];
   game = new Game(currentPolytope);
@@ -52,7 +48,7 @@ function switchPolytope(name) {
   rotation4d.setCenterRotation(currentPolytope.cellCenter);
   hideWin();
   rebuildScene();
-  game.scramble(scrambleCount());
+  game.scramble();
 }
 
 function updateVisuals() {
@@ -210,7 +206,7 @@ function init() {
 
   scrambleBtn.addEventListener('click', () => {
     hideWin();
-    game.scramble(scrambleCount());
+    game.scramble();
   });
 
   let resetConfirming = false;
@@ -244,7 +240,7 @@ function init() {
 
   winScrambleBtn.addEventListener('click', () => {
     hideWin();
-    game.scramble(scrambleCount());
+    game.scramble();
   });
 
   winOverlay.addEventListener('click', (e) => {
@@ -253,7 +249,7 @@ function init() {
 
   // Initial state
   rebuildScene();
-  game.scramble(scrambleCount());
+  game.scramble();
 
   // Animation loop
   function animate() {
