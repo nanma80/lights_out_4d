@@ -22,6 +22,30 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 
 - Each polytope is defined as a data object (see Polytope Data Format below). Adding a new polytope = adding a new data file.
 
+### Incidence Matrix and GF(2) Analysis
+
+The incidence matrix **A** is an *n × m* binary matrix (vertices × rings) where A[i][j] = 1 iff vertex i belongs to ring j. Clicking vertex i toggles exactly the rings in row i, so the game's toggle space is the row space of **A** over GF(2).
+
+| Polytope | Matrix Size | GF(2) Rank | Nullity | Reachable States |
+|----------|-------------|------------|---------|------------------|
+| 16-cell  | 8 × 6       | 3          | 3       | 2³ = 8           |
+| 24-cell  | 24 × 16     | 8          | 8       | 2⁸ = 256         |
+| 600-cell | 120 × 72    | 36         | 36      | 2³⁶ ≈ 6.9 × 10¹⁰ |
+
+- The rank equals exactly half the number of rings in every case.
+- **Reachable states**: only 2^rank of the 2^rings total ring-state configurations can be reached from the all-off state by clicking vertices.
+- **Nullity** (kernel dimension = rings − rank): the number of independent "null toggles" — sets of vertex clicks that leave all rings unchanged.
+
+### God's Number
+
+God's number is the maximum number of moves needed to solve any solvable puzzle optimally. Since click order doesn't matter and double-clicking cancels out, the minimum moves for a state equals the minimum Hamming weight solution vector over GF(2).
+
+| Polytope | God's Number | Move Distribution |
+|----------|-------------|-------------------|
+| 16-cell  | 2           | 0:1, 1:4, 2:3 |
+| 24-cell  | 4           | 0:1, 1:12, 2:66, 3:116, 4:61 |
+| 600-cell | ≥ 10 (lower bound) | Not yet computed |
+
 ### Ring Coloring
 - Each ring is assigned a **color** for its ON state. OFF-state rings are always medium gray (#888888, 70% opacity).
 - **16-cell**: each ring gets a unique color (one color per ring, 6 colors for 6 rings).
