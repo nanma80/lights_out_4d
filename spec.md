@@ -24,8 +24,8 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 
 ### Ring Coloring
 - Each ring is assigned a **color** for its ON state. OFF-state rings are always medium gray (#888888, 70% opacity).
-- v1: each ring gets a **distinct color** from a palette of 6 vibrant hues.
-- Future: rings will be grouped by **Hopf fibration** bundles — rings in the same bundle share a color. The `bundle` field in the polytope data supports this.
+- **16-cell**: each ring gets a unique color (one color per ring, 6 colors for 6 rings).
+- **24-cell and 600-cell**: rings are grouped into **Hopf fibration bundles** via quaternion quotients — rings in the same bundle share a color. The `bundle` field in the polytope data encodes this grouping.
 - Color palette: `["#ff3366", "#33ff66", "#3366ff", "#ffcc00", "#ff6633", "#cc33ff"]`.
 
 ### Stereographic Projection (4D → 3D)
@@ -173,7 +173,7 @@ const POLYTOPE_16CELL = {
 
 - `vertices`: 4D coords on unit S³.
 - `rings[].vertices`: ordered vertex indices forming a great circle. Consecutive pairs + wrap = edges.
-- `rings[].bundle`: color group index. v1 uses unique per ring; future Hopf fibration grouping.
+- `rings[].bundle`: color group index. 16-cell: unique per ring. 24-cell/600-cell: Hopf fibration bundle.
 - `bundleColors`: hex colors for ON-state rings.
 - To add a new polytope: create a new data object in the same format with vertex coordinates, ring membership, and bundle assignments.
 
@@ -199,12 +199,14 @@ The following algorithm generates ring and bundle data from vertex coordinates. 
 5. Repeat from step 1 until all edges are consumed.
 6. **Validation**: confirm the expected ring count (e.g., 16 for 24-cell, 72 for 600-cell) and that each ring has the expected vertex count (6 for 24-cell, 10 for 600-cell).
 
-**Step 3 — Bundle assignment (Hopf fibration)**:
-1. Two rings belong to the same bundle if and only if they share no vertices.
-2. Start with the first unassigned ring. Find all other rings that share no vertices with it — these form a candidate bundle.
-3. Verify that all rings within the candidate bundle are pairwise vertex-disjoint.
-4. Assign the bundle index and repeat for remaining unassigned rings.
-5. **Validation**: confirm all bundles have equal size (e.g., 4 bundles × 4 rings for 24-cell) and that rings within each bundle are fully vertex-disjoint.
+**Step 3 — Bundle assignment (Hopf fibration, for 24-cell and 600-cell)**:
+1. For each ring, take the first edge (v1, v2) and treat each vertex as a quaternion [x, y, z, w].
+2. Compute the quotient q1 × q2⁻¹ and normalize it.
+3. Canonicalize by rounding components (6 decimals), eliminating negative zeros, and making the first nonzero component positive.
+4. Group rings whose canonical quotients form inverse pairs (q and q⁻¹) — these belong to the same bundle.
+5. **Validation**: confirm all bundles have equal size (e.g., 4 bundles × 4 rings for 24-cell, 6 bundles × 12 rings for 600-cell) and that rings within each bundle are fully vertex-disjoint.
+
+**16-cell**: uses one bundle per ring (6 bundles of 1 ring each) for maximum color variety.
 
 ---
 

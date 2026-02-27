@@ -184,67 +184,77 @@ def trace_rings(vertices, edges):
     return rings
 
 
-# --- Step 3: Bundle assignment ---
+# --- Step 3: Bundle assignment via Hopf fibration (quaternion quotients) ---
 
-def assign_bundles(rings, num_vertices):
-    """Group rings into bundles of equal size where each bundle's rings are
-    pairwise vertex-disjoint and together cover all vertices.
-    Uses backtracking to find a valid partition."""
-    ring_sets = [set(r) for r in rings]
+def quat_conjugate(q):
+    """Conjugate of quaternion q = (w, x, y, z) stored as [x, y, z, w]."""
+    return [-q[0], -q[1], -q[2], q[3]]
+
+def quat_multiply(a, b):
+    """Multiply quaternions a * b. Convention: [x, y, z, w]."""
+    ax, ay, az, aw = a
+    bx, by, bz, bw = b
+    return [
+        aw * bx + ax * bw + ay * bz - az * by,
+        aw * by - ax * bz + ay * bw + az * bx,
+        aw * bz + ax * by - ay * bx + az * bw,
+        aw * bw - ax * bx - ay * by - az * bz,
+    ]
+
+def quat_inverse(q):
+    """Inverse of unit quaternion = conjugate."""
+    return quat_conjugate(q)
+
+def quat_normalize(q):
+    n = math.sqrt(sum(x * x for x in q))
+    return [x / n for x in q] if n > 1e-15 else q
+
+def assign_bundles(rings, vertices, edges):
+    """Assign bundles via Hopf fibration: for each edge (v1, v2), compute
+    the quaternion quotient q1 * q2^(-1). Group edges by quotient pairs
+    (q and q^(-1) belong to the same bundle). Then assign each ring the
+    bundle of its edges."""
+    TOL_DIGITS = 6  # round to this many decimals for grouping
+
+    # Compute quotient for each edge (using ring order to fix direction)
+    ring_quotients = {}
+    for ri, ring in enumerate(rings):
+        i1, i2 = ring[0], ring[1]
+        q1, q2 = vertices[i1], vertices[i2]
+        quot = quat_normalize(quat_multiply(q1, quat_inverse(q2)))
+        ring_quotients[ri] = quot
+
+    # Canonicalize: round, kill negative zeros, then pick sign so first nonzero is positive
+    def canonicalize(q):
+        r = tuple(round(x, TOL_DIGITS) + 0.0 for x in q)  # +0.0 eliminates -0.0
+        for val in r:
+            if abs(val) > 1e-8:
+                if val < 0:
+                    return tuple(-x + 0.0 for x in r)
+                return r
+        return r
+
+    # Group rings by canonical quotient pair (q and q^-1 same bundle)
+    bundle_map = {}
+    ring_to_bundle_key = {}
+    for ri, quot in ring_quotients.items():
+        canon = canonicalize(quot)
+        inv_quot = quat_normalize(quat_inverse(quot))
+        canon_inv = canonicalize(inv_quot)
+        key = min(canon, canon_inv)
+        bundle_map.setdefault(key, []).append(ri)
+        ring_to_bundle_key[ri] = key
+
+    # Assign sequential bundle indices
+    bundle_keys = sorted(bundle_map.keys())
+    key_to_idx = {k: i for i, k in enumerate(bundle_keys)}
+
     n = len(rings)
-    verts_per_ring = len(rings[0])
-    bundle_size = num_vertices // verts_per_ring  # rings per bundle
-
-    # Build compatibility: which rings are pairwise vertex-disjoint
-    compatible = [[True] * n for _ in range(n)]
-    for i in range(n):
-        for j in range(i + 1, n):
-            if ring_sets[i] & ring_sets[j]:
-                compatible[i][j] = False
-                compatible[j][i] = False
-
-    # Find all maximal cliques of size bundle_size that cover all vertices
-    all_vertices = set(range(num_vertices))
-
-    def find_bundle(candidates, current, covered):
-        if len(current) == bundle_size:
-            if covered == all_vertices:
-                return [list(current)]
-            return []
-        results = []
-        for idx, c in enumerate(candidates):
-            if ring_sets[c] & covered:
-                continue
-            if not all(compatible[c][r] for r in current):
-                continue
-            current.append(c)
-            results.extend(find_bundle(candidates[idx + 1:], current, covered | ring_sets[c]))
-            current.pop()
-            if results:
-                break  # only need one per starting ring
-        return results
-
-    # Partition all rings into bundles via backtracking
     bundle = [-1] * n
+    for ri in range(n):
+        bundle[ri] = key_to_idx[ring_to_bundle_key[ri]]
 
-    def partition(remaining, bundle_idx):
-        if not remaining:
-            return True
-        bundles_found = find_bundle(remaining, [], set())
-        for b in bundles_found:
-            for r in b:
-                bundle[r] = bundle_idx
-            new_remaining = [r for r in remaining if r not in b]
-            if partition(new_remaining, bundle_idx + 1):
-                return True
-            for r in b:
-                bundle[r] = -1
-        return False
-
-    all_ring_indices = list(range(n))
-    success = partition(all_ring_indices, 0)
-    num_bundles = max(bundle) + 1 if success else -1
-
+    num_bundles = len(bundle_keys)
     return bundle, num_bundles
 
 
@@ -336,7 +346,7 @@ def generate_24cell():
     for i, r in enumerate(rings):
         print(f"  Ring {i}: {r} ({len(r)} vertices)")
 
-    bundle, num_bundles = assign_bundles(rings, len(vertices))
+    bundle, num_bundles = assign_bundles(rings, vertices, edges)
     print(f"Bundles: {num_bundles}")
     for b in range(num_bundles):
         b_rings = [i for i in range(len(rings)) if bundle[i] == b]
@@ -375,7 +385,7 @@ def generate_600cell():
     for i, r in enumerate(rings):
         print(f"  Ring {i}: {r} ({len(r)} vertices)")
 
-    bundle, num_bundles = assign_bundles(rings, len(vertices))
+    bundle, num_bundles = assign_bundles(rings, vertices, edges)
     print(f"Bundles: {num_bundles}")
     for b in range(num_bundles):
         b_rings = [i for i in range(len(rings)) if bundle[i] == b]
