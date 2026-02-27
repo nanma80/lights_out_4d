@@ -140,6 +140,7 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 - **All ON**: scene background → warm amber (#3a2a0a). Overlay: "All Lit Up! ✨ Now try turning them all off!" + move count.
 - Background color syncs with ring state at all times (not just on win).
 - Overlay is translucent, non-blocking. Dismiss by tapping anywhere or pressing Scramble.
+- After 1 second, "Scramble Again" button and "or try a different polytope" hint appear. Tapping the hint dismisses the overlay and pulses the polytope selector to draw attention.
 
 ### Reset
 - In **challenge mode**, Reset requires confirmation: first click changes button to "Sure?" (muted gold text and border); a second click within 3 seconds confirms. Reverts after 3 seconds if unconfirmed.

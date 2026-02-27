@@ -16,6 +16,7 @@ const winOverlay = document.getElementById('win-overlay');
 const winMessage = document.getElementById('win-message');
 const winMoves = document.getElementById('win-moves');
 const winScrambleBtn = document.getElementById('win-scramble');
+const winPolytopeHint = document.getElementById('win-polytope-hint');
 const hintOverlay = document.getElementById('hint-overlay');
 const polytopeSelect = document.getElementById('polytope-select');
 
@@ -77,11 +78,13 @@ function showWin(type) {
   }
   winMoves.textContent = `Moves: ${game.moveCount}`;
   winScrambleBtn.style.visibility = 'hidden';
+  winPolytopeHint.style.visibility = 'hidden';
   winOverlay.classList.add('visible');
   winOverlay.style.pointerEvents = 'none';
   setTimeout(() => {
     winOverlay.style.pointerEvents = '';
     winScrambleBtn.style.visibility = '';
+    winPolytopeHint.style.visibility = '';
   }, 1000);
 }
 
@@ -256,6 +259,14 @@ function init() {
   winScrambleBtn.addEventListener('click', () => {
     hideWin();
     game.scramble();
+  });
+
+  winPolytopeHint.addEventListener('click', () => {
+    hideWin();
+    polytopeSelect.classList.add('selector-highlight');
+    polytopeSelect.addEventListener('animationend', () => {
+      polytopeSelect.classList.remove('selector-highlight');
+    }, { once: true });
   });
 
   winOverlay.addEventListener('click', (e) => {
