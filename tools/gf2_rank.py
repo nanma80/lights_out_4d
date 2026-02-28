@@ -1,7 +1,7 @@
 """Compute GF(2) rank of incidence matrices for all polytopes."""
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
-from generate_polytope import vertices_24cell, vertices_600cell, find_edges, trace_rings
+from generate_polytope import vertices_24cell, vertices_600cell, vertices_bicont, find_edges, find_edges_multi, trace_rings
 from sympy import Matrix, GF
 from sympy.polys.matrices import DomainMatrix
 
@@ -39,3 +39,10 @@ v600 = vertices_600cell()
 e600, _ = find_edges(v600)
 r600 = trace_rings(v600, e600)
 gf2_rank("600-cell", v600, r600)
+
+# Bicont
+import math
+vbc = vertices_bicont()
+ebc = find_edges_multi(vbc, [math.sqrt(2)/2, 0.5])
+rbc = trace_rings(vbc, ebc)
+gf2_rank("Bicont", vbc, rbc)

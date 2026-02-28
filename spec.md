@@ -19,6 +19,7 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 | 16-cell  | 8        | 24    | 6     | 4             | 4          | Implemented |
 | 24-cell  | 24       | 96    | 16    | 6             | 6          | Implemented |
 | 600-cell | 120      | 720   | 72    | 10            | 10         | Implemented |
+| Bicont   | 48       | 336   | 50    | 6 or 8        | 6 or 8     | Implemented |
 
 - Each polytope is defined as a data object (see Polytope Data Format below). Adding a new polytope = adding a new data file.
 
@@ -31,8 +32,9 @@ The incidence matrix **A** is an *n × m* binary matrix (vertices × rings) wher
 | 16-cell  | 8 × 6       | 3          | 3       | 2³ = 8           |
 | 24-cell  | 24 × 16     | 8          | 8       | 2⁸ = 256         |
 | 600-cell | 120 × 72    | 36         | 36      | 2³⁶ ≈ 6.9 × 10¹⁰ |
+| Bicont   | 48 × 50     | 20         | 30      | 2²⁰ ≈ 1.0 × 10⁶  |
 
-- The rank equals exactly half the number of rings in every case.
+- The rank equals exactly half the number of rings for the regular polytopes (16-cell, 24-cell, 600-cell). For bicont (which has mixed ring sizes), rank/rings = 20/50 = 2/5.
 - **Reachable states**: only 2^rank of the 2^rings total ring-state configurations can be reached from the all-off state by clicking vertices.
 - **Nullity** (kernel dimension = rings − rank): the number of independent "null toggles" — sets of vertex clicks that leave all rings unchanged.
 
@@ -40,17 +42,20 @@ The incidence matrix **A** is an *n × m* binary matrix (vertices × rings) wher
 
 God's number is the maximum number of moves needed to solve any solvable puzzle optimally. Since click order doesn't matter and double-clicking cancels out, the minimum moves for a state equals the minimum Hamming weight solution vector over GF(2).
 
+Lower bounds are established by counting: with n independent click choices, at most Σ C(n,i) for i=0..k distinct states are reachable in ≤k moves. For polytopes with antipodal symmetry (e.g., Bicont), each vertex and its antipode toggle the same rings, so n = vertices/2.
+
 | Polytope | God's Number | Move Distribution |
 |----------|-------------|-------------------|
 | 16-cell  | 2           | 0:1, 1:4, 2:3 |
 | 24-cell  | 4           | 0:1, 1:12, 2:66, 3:116, 4:61 |
 | 600-cell | ≥ 10 (lower bound) | Not yet computed |
+| Bicont   | ≥ 8 (lower bound)  | Not yet computed |
 
 ### Ring Coloring
 - Each ring is assigned a **color** for its ON state. OFF-state rings are always medium gray (#888888, 70% opacity).
 - **16-cell**: each ring gets a unique color (one color per ring, 6 colors for 6 rings).
-- **24-cell and 600-cell**: rings are grouped into **Hopf fibration bundles** via quaternion quotients — rings in the same bundle share a color. The `bundle` field in the polytope data encodes this grouping.
-- Color palette: `["#ff3366", "#33ff66", "#3366ff", "#ffcc00", "#ff6633", "#cc33ff"]`.
+- **24-cell, 600-cell, and Bicont**: rings are grouped into **Hopf fibration bundles** via quaternion quotients — rings in the same bundle share a color. The `bundle` field in the polytope data encodes this grouping.
+- Color palette: `["#ff3366", "#33ff66", "#3366ff", "#ffcc00", "#ff6633", "#cc33ff", "#33ccff"]`.
 
 ### Stereographic Projection (4D → 3D)
 - Project from the **south pole** (0, 0, 0, −1) onto the equatorial hyperplane w = 0:
@@ -222,14 +227,14 @@ The following algorithm generates ring and bundle data from vertex coordinates. 
 3. The next edge is (B, reflected). Mark edge (A, B) as used. Advance: A ← B, B ← reflected.
 4. Repeat until returning to the starting edge. Record the ordered vertex sequence as one ring.
 5. Repeat from step 1 until all edges are consumed.
-6. **Validation**: confirm the expected ring count (e.g., 16 for 24-cell, 72 for 600-cell) and that each ring has the expected vertex count (6 for 24-cell, 10 for 600-cell).
+6. **Validation**: confirm the expected ring count and that each ring has the expected vertex count. Polytopes with mixed edge lengths (e.g., Bicont) may have rings of different sizes.
 
-**Step 3 — Bundle assignment (Hopf fibration, for 24-cell and 600-cell)**:
+**Step 3 — Bundle assignment (Hopf fibration, for 24-cell, 600-cell, and Bicont)**:
 1. For each ring, take the first edge (v1, v2) and treat each vertex as a quaternion [x, y, z, w].
 2. Compute the quotient q1 × q2⁻¹ and normalize it.
 3. Canonicalize by rounding components (6 decimals), eliminating negative zeros, and making the first nonzero component positive.
 4. Group rings whose canonical quotients form inverse pairs (q and q⁻¹) — these belong to the same bundle.
-5. **Validation**: confirm all bundles have equal size (e.g., 4 bundles × 4 rings for 24-cell, 6 bundles × 12 rings for 600-cell) and that rings within each bundle are fully vertex-disjoint.
+5. **Validation**: confirm expected bundle count. Regular polytopes have equal-size bundles (e.g., 4 bundles × 4 rings for 24-cell, 6 bundles × 12 rings for 600-cell). Bicont has 7 bundles of unequal sizes.
 
 **16-cell**: uses one bundle per ring (6 bundles of 1 ring each) for maximum color variety.
 
@@ -244,7 +249,7 @@ The following algorithm generates ring and bundle data from vertex coordinates. 
   - "Scramble" button
   - "Reset" button
   - "+" / "−" zoom buttons
-  - Polytope selector (dropdown: 16-cell, 24-cell, 600-cell)
+  - Polytope selector (dropdown: 16-cell, 24-cell, 600-cell, Bicont)
 - Win overlay: centered translucent text over the scene.
 
 ### Responsive

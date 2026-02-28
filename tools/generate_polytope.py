@@ -98,6 +98,42 @@ def vertices_600cell():
     return verts
 
 
+def vertices_bicont():
+    """Bitetracontoctachoron: 48 vertices on unit S³.
+    Convex hull of two dual 24-cells.
+    Family 1: 8 permutations of (±1, 0, 0, 0)
+    Family 2: 16 sign combinations of (±1/2, ±1/2, ±1/2, ±1/2)
+    Family 3: all permutations of (±√2/2, ±√2/2, 0, 0)
+    """
+    verts = []
+    s2 = math.sqrt(2) / 2
+
+    # Family 1: permutations of (±1, 0, 0, 0)
+    for i in range(4):
+        for s in [1, -1]:
+            v = [0.0, 0.0, 0.0, 0.0]
+            v[i] = s
+            _add_unique(verts, v)
+
+    # Family 2: all sign combinations of (±1/2, ±1/2, ±1/2, ±1/2)
+    for s0 in [1, -1]:
+        for s1 in [1, -1]:
+            for s2_ in [1, -1]:
+                for s3 in [1, -1]:
+                    _add_unique(verts, [s0 * 0.5, s1 * 0.5, s2_ * 0.5, s3 * 0.5])
+
+    # Family 3: all permutations of (±√2/2, ±√2/2, 0, 0)
+    for i, j in combinations(range(4), 2):
+        for si in [1, -1]:
+            for sj in [1, -1]:
+                v = [0.0, 0.0, 0.0, 0.0]
+                v[i] = si * s2
+                v[j] = sj * s2
+                _add_unique(verts, v)
+
+    return verts
+
+
 # --- Step 1: Edge discovery ---
 
 def dot(a, b):
@@ -114,6 +150,18 @@ def find_edges(vertices, tol=1e-8):
         if abs(dot(vertices[i], vertices[j]) - max_ip) < tol:
             edges.add((i, j))
     return edges, max_ip
+
+
+def find_edges_multi(vertices, inner_products, tol=1e-8):
+    """Find edges matching any of the given inner product values."""
+    edges = set()
+    for i, j in combinations(range(len(vertices)), 2):
+        ip = dot(vertices[i], vertices[j])
+        for target_ip in inner_products:
+            if abs(ip - target_ip) < tol:
+                edges.add((i, j))
+                break
+    return edges
 
 
 # --- Step 2: Ring tracing via reflection ---
@@ -271,7 +319,7 @@ def validate(vertices, edges, rings, bundle, num_bundles,
         errors.append(f"Expected {expected_rings} rings, got {len(rings)}")
 
     for i, r in enumerate(rings):
-        if len(r) != expected_verts_per_ring:
+        if expected_verts_per_ring is not None and len(r) != expected_verts_per_ring:
             errors.append(f"Ring {i} has {len(r)} vertices, expected {expected_verts_per_ring}")
 
     # Check all edges are consumed (covered by trace_rings completing without leftover)
@@ -405,7 +453,51 @@ def generate_600cell():
     print(format_js("600-cell", vertices, rings, bundle, num_bundles))
 
 
+def generate_bicont():
+    print("=== Bicont ===")
+
+    vertices = vertices_bicont()
+    print(f"Vertices: {len(vertices)}")
+
+    norms = [math.sqrt(dot(v, v)) for v in vertices]
+    max_norm_err = max(abs(n - 1.0) for n in norms)
+    print(f"Max norm deviation from 1.0: {max_norm_err:.2e}")
+
+    # Two edge types: lacing (ip = √2/2 ≈ 0.7071) and icositetrachoral (ip = 0.5)
+    s2 = math.sqrt(2) / 2
+    edges = find_edges_multi(vertices, [s2, 0.5])
+    print(f"Edges: {len(edges)} (using inner products {s2:.6f} and 0.5)")
+
+    rings = trace_rings(vertices, edges)
+    print(f"Rings: {len(rings)}")
+    for i, r in enumerate(rings):
+        print(f"  Ring {i}: {r} ({len(r)} vertices)")
+
+    bundle, num_bundles = assign_bundles(rings, vertices, edges)
+    print(f"Bundles: {num_bundles}")
+    for b in range(num_bundles):
+        b_rings = [i for i in range(len(rings)) if bundle[i] == b]
+        print(f"  Bundle {b}: rings {b_rings}")
+
+    # Validate: bicont has mixed ring sizes, so skip per-ring-size check
+    ring_sizes = set(len(r) for r in rings)
+    errors = validate(vertices, edges, rings, bundle, num_bundles,
+                       expected_edges=len(edges), expected_rings=len(rings),
+                       expected_verts_per_ring=None, expected_bundles=num_bundles)
+    if errors:
+        print("\nVALIDATION ERRORS:")
+        for e in errors:
+            print(f"  ✗ {e}")
+    else:
+        print("\n✓ All validations passed")
+
+    print("\n--- JavaScript output ---\n")
+    print(format_js("bicont", vertices, rings, bundle, num_bundles))
+
+
 if __name__ == "__main__":
     generate_24cell()
     print("\n" + "=" * 60 + "\n")
     generate_600cell()
+    print("\n" + "=" * 60 + "\n")
+    generate_bicont()

@@ -177,8 +177,8 @@ export class Renderer {
   // Build meshes for a polytope with given 4D rotation applied
   buildPolytope(polytope, rotatedVertices4D, ringStates, cameraDistance) {
     const scale = (cameraDistance || DEFAULT_CAMERA_DISTANCE) / DEFAULT_CAMERA_DISTANCE;
-    const vertexScale = polytope.name === '600-cell' ? 0.83 : 1;
-    const tubeScale = polytope.name === '600-cell' ? 0.75 : 1;
+    const vertexScale = (polytope.name === '600-cell' || polytope.name === 'bicont') ? 0.83 : 1;
+    const tubeScale = (polytope.name === '600-cell' || polytope.name === 'bicont') ? 0.75 : 1;
     const vertexRadius = VERTEX_RADIUS * scale * vertexScale;
     const tubeRadius = RING_TUBE_RADIUS * scale * tubeScale;
 
