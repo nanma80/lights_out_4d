@@ -176,8 +176,7 @@ Lower bounds are established by counting: with n independent click choices, at m
 - After 1 second, "Scramble Again" button and "or try a different polytope" hint appear. Tapping the hint dismisses the overlay and pulses the polytope selector to draw attention.
 
 ### Reset
-- In **challenge mode**, Reset requires confirmation: first click changes button to "Sure?" (muted gold text and border); a second click within 3 seconds confirms. Reverts after 3 seconds if unconfirmed.
-- Outside challenge mode, Reset works immediately with one click.
+- Reset works immediately with one click.
 - Sets all rings to OFF, resets move counter to 0, background turns blue.
 
 ---
