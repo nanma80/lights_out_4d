@@ -391,6 +391,36 @@ export const POLYTOPE_BICONT = {
   cellCenter: [0.7071067811865476, 0.5, 0.5, 0],
 };
 
+export const POLYTOPE_BIDECA = {
+  name: "bideca",
+  vertices: [
+    [0.7905694150, -0.4564354646, -0.3227486122, -0.2500000000],
+    [-0.7905694150, -0.4564354646, -0.3227486122, -0.2500000000],
+    [0.0000000000, 0.9128709292, -0.3227486122, -0.2500000000],
+    [0.0000000000, 0.0000000000, 0.9682458366, -0.2500000000],
+    [0.0000000000, 0.0000000000, 0.0000000000, 1.0000000000],
+    [-0.7905694150, 0.4564354646, 0.3227486122, 0.2500000000],
+    [0.7905694150, 0.4564354646, 0.3227486122, 0.2500000000],
+    [0.0000000000, -0.9128709292, 0.3227486122, 0.2500000000],
+    [0.0000000000, 0.0000000000, -0.9682458366, 0.2500000000],
+    [0.0000000000, 0.0000000000, 0.0000000000, -1.0000000000],
+  ],
+  rings: [
+    { vertices: [3, 4, 8, 9], bundle: 0 },
+    { vertices: [3, 7, 8, 2], bundle: 1 },
+    { vertices: [4, 6, 9, 1], bundle: 1 },
+    { vertices: [5, 7, 0, 2], bundle: 0 },
+    { vertices: [0, 8, 5, 3], bundle: 2 },
+    { vertices: [1, 3, 6, 8], bundle: 3 },
+    { vertices: [4, 5, 9, 0], bundle: 3 },
+    { vertices: [5, 6, 0, 1], bundle: 4 },
+    { vertices: [2, 4, 7, 9], bundle: 4 },
+    { vertices: [1, 2, 6, 7], bundle: 2 },
+  ],
+  bundleColors: ["#ff3366", "#33ff66", "#3366ff", "#ffcc00", "#ff6633"],
+  cellCenter: [0.75, 0.25, 0.25, 0.5590169943749475],
+};
+
 // Build vertex-to-rings mapping: for each vertex, which ring indices contain it
 export function buildVertexToRings(polytope) {
   const map = new Array(polytope.vertices.length).fill(null).map(() => []);

@@ -46,3 +46,10 @@ vbc = vertices_bicont()
 ebc = find_edges_multi(vbc, [math.sqrt(2)/2, 0.5])
 rbc = trace_rings(vbc, ebc)
 gf2_rank("Bicont", vbc, rbc)
+
+# Bideca
+from generate_polytope import vertices_bideca, trace_rings_perp
+vbd = vertices_bideca()
+ebd = find_edges_multi(vbd, [0.25, -0.25])
+rbd = trace_rings_perp(vbd, ebd)
+gf2_rank("Bideca", vbd, rbd)

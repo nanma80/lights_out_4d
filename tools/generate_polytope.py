@@ -134,6 +134,35 @@ def vertices_bicont():
     return verts
 
 
+def vertices_bideca():
+    """Bidecachoron: 10 vertices on unit S³.
+    Convex hull of a pentachoron and its central inversion.
+    Coordinates from wiki, normalized to unit sphere.
+    """
+    s3 = math.sqrt(3)
+    s6 = math.sqrt(6)
+    s10 = math.sqrt(10)
+    raw = [
+        ( 0.5, -s3/6, -s6/12, -s10/20),
+        (-0.5, -s3/6, -s6/12, -s10/20),
+        ( 0.0,  s3/3, -s6/12, -s10/20),
+        ( 0.0,  0.0,   s6/4,  -s10/20),
+        ( 0.0,  0.0,   0.0,    s10/5),
+    ]
+    # Add central inversions
+    verts = []
+    for v in raw:
+        verts.append(list(v))
+    for v in raw:
+        verts.append([-c for c in v])
+    # Normalize to unit S³
+    for v in verts:
+        n = math.sqrt(sum(c*c for c in v))
+        for i in range(4):
+            v[i] /= n
+    return verts
+
+
 # --- Step 1: Edge discovery ---
 
 def dot(a, b):
@@ -232,7 +261,81 @@ def trace_rings(vertices, edges):
     return rings
 
 
-# --- Step 3: Bundle assignment via Hopf fibration (quaternion quotients) ---
+def perp_component(edge_vec, vertex):
+    """Compute the component of edge_vec perpendicular to vertex on S³.
+    perp = edge_vec - proj(edge_vec onto vertex)
+    """
+    d = dot(edge_vec, vertex)
+    vv = dot(vertex, vertex)
+    return [e - d / vv * v for e, v in zip(edge_vec, vertex)]
+
+
+def trace_rings_perp(vertices, edges):
+    """Trace rings using perpendicular component matching.
+    For each edge at a vertex, compute the perp component of the edge vector.
+    The next edge in the ring is the one whose perp component is anti-parallel.
+    """
+    adj = {}
+    for i, j in edges:
+        adj.setdefault(i, set()).add(j)
+        adj.setdefault(j, set()).add(i)
+
+    unused = set()
+    for e in edges:
+        unused.add((min(e), max(e)))
+
+    rings = []
+    while unused:
+        start_edge = next(iter(unused))
+        a_idx, b_idx = start_edge
+
+        ring_vertices = [a_idx]
+        prev_idx, curr_idx = a_idx, b_idx
+
+        while True:
+            ring_vertices.append(curr_idx)
+            edge_key = (min(prev_idx, curr_idx), max(prev_idx, curr_idx))
+            unused.discard(edge_key)
+
+            # Edge vector from curr to prev
+            incoming = [vertices[prev_idx][d] - vertices[curr_idx][d] for d in range(4)]
+            incoming_perp = perp_component(incoming, vertices[curr_idx])
+            in_norm = math.sqrt(dot(incoming_perp, incoming_perp))
+
+            # Find the neighbor whose outgoing perp is anti-parallel to incoming perp
+            best_idx = None
+            best_cos = 2  # Start high, looking for most negative (anti-parallel)
+            for nb in adj[curr_idx]:
+                if nb == prev_idx:
+                    continue
+                outgoing = [vertices[nb][d] - vertices[curr_idx][d] for d in range(4)]
+                outgoing_perp = perp_component(outgoing, vertices[curr_idx])
+                out_norm = math.sqrt(dot(outgoing_perp, outgoing_perp))
+                if in_norm < 1e-12 or out_norm < 1e-12:
+                    continue
+                cos_val = dot(incoming_perp, outgoing_perp) / (in_norm * out_norm)
+                # We want cos ≈ -1 (anti-parallel)
+                if cos_val < best_cos - 1e-8:
+                    # Strictly more anti-parallel
+                    best_cos = cos_val
+                    best_idx = nb
+
+            if best_idx is None:
+                raise ValueError(f"No anti-parallel edge found at vertex {curr_idx}")
+
+            prev_idx, curr_idx = curr_idx, best_idx
+
+            if curr_idx == ring_vertices[0]:
+                edge_key = (min(prev_idx, curr_idx), max(prev_idx, curr_idx))
+                unused.discard(edge_key)
+                break
+
+        rings.append(ring_vertices)
+
+    return rings
+
+
+
 
 def quat_conjugate(q):
     """Conjugate of quaternion q = (w, x, y, z) stored as [x, y, z, w]."""
@@ -257,18 +360,31 @@ def quat_normalize(q):
     n = math.sqrt(sum(x * x for x in q))
     return [x / n for x in q] if n > 1e-15 else q
 
-def assign_bundles(rings, vertices, edges):
-    """Assign bundles via Hopf fibration: for each edge (v1, v2), compute
-    the quaternion quotient q1 * q2^(-1). Group edges by quotient pairs
-    (q and q^(-1) belong to the same bundle). Then assign each ring the
-    bundle of its edges."""
+def assign_bundles(rings, vertices, edges, edge_ip=None):
+    """Assign bundles via Hopf fibration: for each ring's first edge of the
+    specified type, compute the quaternion quotient q1 * q2^(-1). Group by
+    quotient pairs (q and q^(-1) belong to the same bundle).
+    If edge_ip is given, use the first edge in the ring matching that inner product."""
     TOL_DIGITS = 6  # round to this many decimals for grouping
 
-    # Compute quotient for each edge (using ring order to fix direction)
+    # Compute quotient for each ring
     ring_quotients = {}
     for ri, ring in enumerate(rings):
-        i1, i2 = ring[0], ring[1]
-        q1, q2 = vertices[i1], vertices[i2]
+        if edge_ip is not None:
+            # Find first edge in ring matching the target inner product
+            found = False
+            for k in range(len(ring)):
+                i1, i2 = ring[k], ring[(k + 1) % len(ring)]
+                ip = dot(vertices[i1], vertices[i2])
+                if abs(ip - edge_ip) < 1e-6:
+                    q1, q2 = vertices[i1], vertices[i2]
+                    found = True
+                    break
+            if not found:
+                raise ValueError(f"Ring {ri} has no edge with ip≈{edge_ip}")
+        else:
+            i1, i2 = ring[0], ring[1]
+            q1, q2 = vertices[i1], vertices[i2]
         quot = quat_normalize(quat_multiply(q1, quat_inverse(q2)))
         ring_quotients[ri] = quot
 
@@ -495,9 +611,55 @@ def generate_bicont():
     print(format_js("bicont", vertices, rings, bundle, num_bundles))
 
 
+def generate_bideca():
+    print("=== Bideca ===")
+
+    vertices = vertices_bideca()
+    print(f"Vertices: {len(vertices)}")
+
+    norms = [math.sqrt(dot(v, v)) for v in vertices]
+    max_norm_err = max(abs(n - 1.0) for n in norms)
+    print(f"Max norm deviation from 1.0: {max_norm_err:.2e}")
+
+    # Print inner products for edge detection
+    ips = set()
+    for i, j in combinations(range(len(vertices)), 2):
+        ip = round(dot(vertices[i], vertices[j]), 6)
+        ips.add(ip)
+    print(f"Distinct inner products: {sorted(ips)}")
+
+    # Two edge types: pentachoral and lacing
+    edges = find_edges_multi(vertices, [0.25, -0.25])
+    print(f"Edges: {len(edges)}")
+
+    # Count by type
+    e_pos = sum(1 for i, j in edges if abs(dot(vertices[i], vertices[j]) - 0.25) < 1e-8)
+    e_neg = sum(1 for i, j in edges if abs(dot(vertices[i], vertices[j]) + 0.25) < 1e-8)
+    print(f"  Pentachoral edges (ip≈0.25): {e_pos}")
+    print(f"  Lacing edges (ip≈-0.25): {e_neg}")
+
+    # Trace rings using perpendicular component method
+    rings = trace_rings_perp(vertices, edges)
+    print(f"Rings: {len(rings)}")
+    for i, r in enumerate(rings):
+        print(f"  Ring {i}: {r} ({len(r)} vertices)")
+
+    # Bundle assignment using shortest edges (ip=0.25)
+    bundle, num_bundles = assign_bundles(rings, vertices, edges, edge_ip=0.25)
+    print(f"Bundles: {num_bundles}")
+    for b in range(num_bundles):
+        b_rings = [i for i in range(len(rings)) if bundle[i] == b]
+        print(f"  Bundle {b}: rings {b_rings}")
+
+    print("\n--- JavaScript output ---\n")
+    print(format_js("bideca", vertices, rings, bundle, num_bundles))
+
+
 if __name__ == "__main__":
     generate_24cell()
     print("\n" + "=" * 60 + "\n")
     generate_600cell()
     print("\n" + "=" * 60 + "\n")
     generate_bicont()
+    print("\n" + "=" * 60 + "\n")
+    generate_bideca()

@@ -20,6 +20,7 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 | 24-cell  | 24       | 96    | 16    | 6             | 6          | Implemented |
 | 600-cell | 120      | 720   | 72    | 10            | 10         | Implemented |
 | Bicont   | 48       | 336   | 50    | 6 or 8        | 6 or 8     | Implemented |
+| Bideca   | 10       | 40    | 10    | 4             | 4          | Implemented |
 
 - Each polytope is defined as a data object (see Polytope Data Format below). Adding a new polytope = adding a new data file.
 
@@ -33,8 +34,9 @@ The incidence matrix **A** is an *n × m* binary matrix (vertices × rings) wher
 | 24-cell  | 24 × 16     | 8          | 8       | 2⁸ = 256         |
 | 600-cell | 120 × 72    | 36         | 36      | 2³⁶ ≈ 6.9 × 10¹⁰ |
 | Bicont   | 48 × 50     | 20         | 30      | 2²⁰ ≈ 1.0 × 10⁶  |
+| Bideca   | 10 × 10     | 4          | 6       | 2⁴ = 16          |
 
-- The rank equals exactly half the number of rings for the regular polytopes (16-cell, 24-cell, 600-cell). For bicont (which has mixed ring sizes), rank/rings = 20/50 = 2/5.
+- The rank equals exactly half the number of rings for the regular polytopes (16-cell, 24-cell, 600-cell). For bicont (which has mixed ring sizes), rank/rings = 20/50 = 2/5. For bideca, rank/rings = 4/10 = 2/5.
 - **Reachable states**: only 2^rank of the 2^rings total ring-state configurations can be reached from the all-off state by clicking vertices.
 - **Nullity** (kernel dimension = rings − rank): the number of independent "null toggles" — sets of vertex clicks that leave all rings unchanged.
 
@@ -50,10 +52,12 @@ Lower bounds are established by counting: with n independent click choices, at m
 | 24-cell  | 4           | 0:1, 1:12, 2:66, 3:116, 4:61 |
 | 600-cell | ≥ 10 (lower bound) | Not yet computed |
 | Bicont   | ≥ 8 (lower bound)  | Not yet computed |
+| Bideca   | 2           | 0:1, 1:5, 2:10 |
 
 ### Ring Coloring
 - Each ring is assigned a **color** for its ON state. OFF-state rings are always medium gray (#888888, 70% opacity).
-- **16-cell**: each ring gets a unique color (one color per ring, 6 colors for 6 rings).
+- **16-cell**: each ring gets a unique color (one color per ring, 6 colors for 6 rings). Hopf fibration gives 3 bundles of 2, but 6 individual colors are used for visual variety.
+- **Bideca**: 5 bundles of 2 vertex-disjoint rings each. Quaternion quotient gives 10 distinct quotients (no shared bundles), so bundles are assigned by finding a perfect matching of vertex-disjoint ring pairs instead.
 - **24-cell, 600-cell, and Bicont**: rings are grouped into **Hopf fibration bundles** via quaternion quotients — rings in the same bundle share a color. The `bundle` field in the polytope data encodes this grouping.
 - Color palette: `["#ff3366", "#33ff66", "#3366ff", "#ffcc00", "#ff6633", "#cc33ff", "#33ccff"]`.
 
@@ -218,7 +222,11 @@ The following algorithm generates ring and bundle data from vertex coordinates. 
 2. Enumerate all unordered pairs of vertices. A pair (Vᵢ, Vⱼ) is an edge if `dot(Vᵢ, Vⱼ) ≈ max_ip` (within floating-point tolerance).
 3. Store edges as a set of unordered index pairs.
 
-**Step 2 — Ring tracing via reflection**:
+**Step 2 — Ring tracing**:
+
+Two methods are available depending on the polytope's edge geometry:
+
+**Method A — Reflection** (for polytopes whose edges lie on great circles, e.g., 16-cell, 24-cell, 600-cell, Bicont):
 1. Maintain a set of unused edges. Pick any unused edge (A, B) to start a new ring.
 2. Compute the next vertex by reflecting A through B's axis on S³:
    - `projection = B × dot(A, B) / dot(B, B)`
@@ -227,16 +235,83 @@ The following algorithm generates ring and bundle data from vertex coordinates. 
 3. The next edge is (B, reflected). Mark edge (A, B) as used. Advance: A ← B, B ← reflected.
 4. Repeat until returning to the starting edge. Record the ordered vertex sequence as one ring.
 5. Repeat from step 1 until all edges are consumed.
-6. **Validation**: confirm the expected ring count and that each ring has the expected vertex count. Polytopes with mixed edge lengths (e.g., Bicont) may have rings of different sizes.
 
-**Step 3 — Bundle assignment (Hopf fibration, for 24-cell, 600-cell, and Bicont)**:
-1. For each ring, take the first edge (v1, v2) and treat each vertex as a quaternion [x, y, z, w].
+**Method B — Perpendicular component** (for polytopes whose edges don't individually lie on great circles, e.g., Bideca):
+1. For a given edge (A, B), compute the edge vector `e = A − B` and its component perpendicular to B on S³: `perp = e − (e·B / B·B) × B`.
+2. Among all other edges incident to B, find the one whose perpendicular component is most anti-parallel (cosine ≈ −1) to the incoming perpendicular. This is the continuation of the ring.
+3. Follow edges using this rule until the ring closes.
+4. Repeat until all edges are consumed.
+
+**Validation**: confirm the expected ring count and that each ring has the expected vertex count. Polytopes with mixed edge lengths (e.g., Bicont, Bideca) may have rings of different sizes or alternating edge types.
+
+**Note**: Method B generalizes Method A. When edges lie on great circles, the reflection C = 2(A·B)B − A gives `perp_out = (A·B)B − A = −perp_in`, so the perpendicular components are exactly anti-parallel (cosine = −1) and both methods select the same next edge. Method A is more direct (computes the exact target point), while Method B works even when edges don't form great circles.
+
+**Step 3 — Bundle assignment**:
+
+**Method A — Hopf fibration via quaternion quotients** (24-cell, 600-cell, Bicont):
+1. For each ring, take the first edge of a chosen type (v1, v2) and treat each vertex as a quaternion [x, y, z, w].
 2. Compute the quotient q1 × q2⁻¹ and normalize it.
 3. Canonicalize by rounding components (6 decimals), eliminating negative zeros, and making the first nonzero component positive.
 4. Group rings whose canonical quotients form inverse pairs (q and q⁻¹) — these belong to the same bundle.
-5. **Validation**: confirm expected bundle count. Regular polytopes have equal-size bundles (e.g., 4 bundles × 4 rings for 24-cell, 6 bundles × 12 rings for 600-cell). Bicont has 7 bundles of unequal sizes.
+5. For polytopes with mixed edge types (e.g., Bicont, Bideca), use only the shortest edges for the quotient computation.
+6. **Validation**: confirm expected bundle count. Regular polytopes have equal-size bundles (e.g., 4 bundles × 4 rings for 24-cell, 6 bundles × 12 rings for 600-cell). Bicont has 7 bundles of unequal sizes.
 
-**16-cell**: uses one bundle per ring (6 bundles of 1 ring each) for maximum color variety.
+**Method B — Combinatorial vertex-disjoint pairing** (Bideca):
+If the quaternion quotient method yields all-distinct quotients (no shared bundles), bundles can instead be assigned by finding a perfect matching of vertex-disjoint ring pairs. Two rings are vertex-disjoint if they share no vertices. A perfect matching partitions all rings into pairs. This is solved as a combinatorial search (backtracking over disjoint pairs). Bideca has 6 possible perfect matchings; any one gives 5 bundles of 2 rings each.
+
+**Override for aesthetics** (16-cell):
+16-cell has 3 Hopf bundles of 2 rings each, but intentionally uses 6 bundles (one per ring) for maximum color variety.
+
+**Step 4 — Cell center**:
+The `cellCenter` field positions the polytope's initial 4D orientation. It should be a vertex of the **dual polytope**, normalized to unit S³. This places a cell face toward the viewer for a visually appealing default view. Look up the dual on a polytope wiki and use one of its vertex coordinates.
+
+### Adding a New Polytope — Walkthrough
+
+This documents the full process used to add Bideca (bidecachoron) as a worked example.
+
+**1. Look up vertex coordinates**:
+- Source: [polytope.miraheze.org/wiki/Bidecachoron](https://polytope.miraheze.org/wiki/Bidecachoron)
+- Bideca = convex hull of a pentachoron and its central inversion (10 vertices).
+- Copy coordinates from the wiki. Normalize all vertices to lie on the unit 3-sphere S³ (divide by circumradius).
+- Verify: all vertex norms should equal 1.0 within floating-point tolerance.
+
+**2. Identify edge types and discover edges**:
+- Compute all pairwise inner products between vertices. Distinct values indicate different edge lengths.
+- Bideca has inner products {−1.0, −0.25, 0.25}. The value −1.0 is the antipodal pair, leaving two edge types: ip = 0.25 (pentachoral edges, 20) and ip = −0.25 (lacing edges, 20), totaling 40 edges.
+- For polytopes with a single edge type, use `find_edges()`. For multiple types, use `find_edges_multi()` with a list of target inner products.
+
+**3. Trace rings**:
+- First attempt: reflection method (Method A). If the reflected point lands on a vertex, rings are successfully traced.
+- If reflection fails (reflected point not found among vertices), the edges don't lie on great circles. Use the perpendicular component method (Method B) instead.
+- Bideca: reflection failed because pentachoron edges don't form great circles. Perpendicular component method succeeded, yielding 10 rings of 4 vertices each, alternating between the two edge types.
+- Verify: all edges consumed, each vertex appears in the expected number of rings (4 for bideca).
+
+**4. Assign bundles**:
+- Try quaternion quotient method first (using shortest edges for mixed-type polytopes).
+- Bideca: all 10 quotients were distinct with w = 0.25 — no inverse pairs matched. Quaternion method gives 10 singleton bundles.
+- Fallback: search for vertex-disjoint ring pairs via combinatorial matching. Found 6 perfect matchings, each giving 5 bundles of 2 rings. Chose first matching: {(0,3), (1,2), (4,9), (5,6), (7,8)}.
+- Assign 5 colors (reusing palette from other polytopes).
+
+**5. Set cell center**:
+- Look up the dual polytope (Bideca's dual = Decachoron).
+- Source: [polytope.miraheze.org/wiki/Decachoron](https://polytope.miraheze.org/wiki/Decachoron)
+- Take a vertex of the decachoron, normalize to unit S³: [0.75, 0.25, 0.25, √5/4].
+- Verify it is NOT a vertex of the bideca itself.
+
+**6. Add to codebase**:
+- Add polytope data object to `src/polytopes.js` with vertices, rings (with bundle indices), bundleColors, and cellCenter.
+- Add import and map entry in `src/main.js`.
+- Add `<option>` to selector in `index.html`.
+- If the polytope has many vertices/edges, adjust vertex and tube scaling in `src/rendering.js`.
+- Update `tools/generate_polytope.py` with the vertex generation and ring tracing functions.
+- Update `tools/gf2_rank.py` to include the new polytope.
+- Run GF(2) rank analysis and God's number computation (if feasible).
+- Update `spec.md` tables.
+
+**7. Verify**:
+- Run `python tools/generate_polytope.py` to verify ring/bundle generation.
+- Test locally with `python -m http.server 8080`.
+- Check visual appearance: rings should form visible closed loops, colors should be distinct.
 
 ---
 
@@ -249,7 +324,7 @@ The following algorithm generates ring and bundle data from vertex coordinates. 
   - "Scramble" button
   - "Reset" button
   - "+" / "−" zoom buttons
-  - Polytope selector (dropdown: 16-cell, 24-cell, 600-cell, Bicont)
+  - Polytope selector (dropdown: 16-cell, 24-cell, 600-cell, Bicont, Bideca)
 - Win overlay: centered translucent text over the scene.
 
 ### Responsive
