@@ -1,6 +1,6 @@
 // main.js — Entry point, wires everything together
 
-import { POLYTOPE_16CELL, POLYTOPE_24CELL, POLYTOPE_600CELL, POLYTOPE_BICONT, POLYTOPE_BIDECA } from './polytopes.js?v=10';
+import { POLYTOPE_16CELL, POLYTOPE_24CELL, POLYTOPE_600CELL, POLYTOPE_BICONT, POLYTOPE_BIDECA, POLYTOPE_66DIP, POLYTOPE_88DIP, POLYTOPE_1010DIP, POLYTOPE_1212DIP } from './polytopes.js?v=10';
 import { rotate4D } from './math4d.js?v=10';
 import { Renderer } from './rendering.js?v=10';
 import { Trackball, Rotation4D, ClickHandler } from './controls.js?v=10';
@@ -26,6 +26,10 @@ const POLYTOPES = {
   '600-cell': POLYTOPE_600CELL,
   'bicont': POLYTOPE_BICONT,
   'bideca': POLYTOPE_BIDECA,
+  '6,6-dip': POLYTOPE_66DIP,
+  '8,8-dip': POLYTOPE_88DIP,
+  '10,10-dip': POLYTOPE_1010DIP,
+  '12,12-dip': POLYTOPE_1212DIP,
 };
 
 // State

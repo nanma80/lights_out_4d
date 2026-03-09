@@ -53,3 +53,10 @@ vbd = vertices_bideca()
 ebd = find_edges_multi(vbd, [0.25, -0.25])
 rbd = trace_rings_perp(vbd, ebd)
 gf2_rank("Bideca", vbd, rbd)
+
+# 4,6-duopyramid
+from generate_polytope import vertices_duopyramid, edges_duopyramid
+vdp = vertices_duopyramid(4, 6)
+edp = edges_duopyramid(4, 6)
+rdp = trace_rings(vdp, edp)
+gf2_rank("4,6-dip", vdp, rdp)

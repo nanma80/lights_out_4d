@@ -24,8 +24,12 @@ For each polytope, edges form great circles called **rings**. Click a vertex to 
 | 600-cell | 120      | 72    | Hard       |
 | Bicont   | 48       | 50    | Hard       |
 | Bideca   | 10       | 10    | Easy       |
+| {6}+{6}  | 12       | 11    | Medium     |
+| {8}+{8}  | 16       | 18    | Easy       |
+| {10}+{10}| 20       | 27    | Medium     |
+| {12}+{12}| 24       | 38    | Medium     |
 
-Bicont and bideca are the duals of the bitruncated 24-cell and bitruncated 5-cell, respectively.
+Bicont and bideca are the duals of the bitruncated 24-cell and bitruncated 5-cell, respectively. The {2n}+{2n} shapes are duals of {2n}×{2n} duoprisms.
 
 ## Motivation
 

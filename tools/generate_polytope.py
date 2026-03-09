@@ -163,6 +163,34 @@ def vertices_bideca():
     return verts
 
 
+def vertices_duopyramid(p, q):
+    """Dual of {p}x{q} duoprism: p+q vertices on unit S³.
+    p-gon vertices in XY plane, q-gon vertices in ZW plane.
+    Requires p,q both even for ring decomposition (all-even vertex degrees).
+    """
+    verts = []
+    for k in range(p):
+        angle = 2 * math.pi * k / p
+        verts.append([math.cos(angle), math.sin(angle), 0.0, 0.0])
+    for k in range(q):
+        angle = 2 * math.pi * k / q
+        verts.append([0.0, 0.0, math.cos(angle), math.sin(angle)])
+    return verts
+
+
+def edges_duopyramid(p, q):
+    """Edges of {p}x{q} duopyramid: p-gon cycle + q-gon cycle + all cross edges."""
+    edges = set()
+    for k in range(p):
+        edges.add((k, (k + 1) % p))
+    for k in range(q):
+        edges.add((p + k, p + (k + 1) % q))
+    for i in range(p):
+        for j in range(q):
+            edges.add((min(i, p + j), max(i, p + j)))
+    return edges
+
+
 # --- Step 1: Edge discovery ---
 
 def dot(a, b):
@@ -467,14 +495,21 @@ def validate(vertices, edges, rings, bundle, num_bundles,
 
 # --- Output ---
 
-def format_js(name, vertices, rings, bundle, num_bundles):
+def format_js(name, vertices, rings, bundle, num_bundles, white_bundle_0=False):
     """Format as JavaScript data object for polytopes.js."""
-    palette = [
-        "#ff3366", "#33ff66", "#3366ff", "#ffcc00",
-        "#ff6633", "#cc33ff", "#33ccff", "#ff33cc",
-        "#66ff33", "#ff9933", "#9933ff", "#33ffcc",
-    ]
-    colors = palette[:num_bundles]
+    if white_bundle_0:
+        cross_palette = [
+            "#33ff66", "#ff3366", "#ffcc00", "#3366ff",
+            "#ff6633", "#cc33ff", "#33ccff", "#ff33cc",
+        ]
+        colors = ["#ffffff"] + cross_palette[:num_bundles - 1]
+    else:
+        palette = [
+            "#ff3366", "#33ff66", "#3366ff", "#ffcc00",
+            "#ff6633", "#cc33ff", "#33ccff", "#ff33cc",
+            "#66ff33", "#ff9933", "#9933ff", "#33ffcc",
+        ]
+        colors = palette[:num_bundles]
 
     lines = []
     lines.append(f"export const POLYTOPE_{name.upper().replace('-', '')} = {{")
@@ -655,6 +690,51 @@ def generate_bideca():
     print(format_js("bideca", vertices, rings, bundle, num_bundles))
 
 
+def find_vertex_disjoint_matching(rings, n_rings):
+    """Find a perfect matching of vertex-disjoint ring pairs via backtracking."""
+    def backtrack(unmatched, pairs):
+        if not unmatched:
+            return pairs
+        first = unmatched[0]
+        rest = unmatched[1:]
+        for other in rest:
+            s1 = set(rings[first])
+            s2 = set(rings[other])
+            if not s1.intersection(s2):
+                remaining = [r for r in rest if r != other]
+                result = backtrack(remaining, pairs + [(first, other)])
+                if result is not None:
+                    return result
+        return None
+    return backtrack(list(range(n_rings)), [])
+
+
+def generate_duopyramid_46():
+    print("=== 4,6-duopyramid ===")
+
+    p, q = 4, 6
+    vertices = vertices_duopyramid(p, q)
+    print(f"Vertices: {len(vertices)}")
+
+    edges = edges_duopyramid(p, q)
+    print(f"Edges: {len(edges)}")
+
+    rings = trace_rings(vertices, edges)
+    print(f"Rings: {len(rings)}")
+    for i, r in enumerate(rings):
+        print(f"  Ring {i}: {r} ({len(r)} vertices)")
+
+    # Bundle assignment via Hopf fibration
+    bundle, num_bundles = assign_bundles(rings, vertices, edges)
+    print(f"Bundles: {num_bundles}")
+    for b in range(num_bundles):
+        b_rings = [i for i in range(len(rings)) if bundle[i] == b]
+        print(f"  Bundle {b}: rings {b_rings}")
+
+    print("\n--- JavaScript output ---\n")
+    print(format_js("46-dip", vertices, rings, bundle, num_bundles, white_bundle_0=True))
+
+
 if __name__ == "__main__":
     generate_24cell()
     print("\n" + "=" * 60 + "\n")
@@ -663,3 +743,33 @@ if __name__ == "__main__":
     generate_bicont()
     print("\n" + "=" * 60 + "\n")
     generate_bideca()
+    print("\n" + "=" * 60 + "\n")
+    generate_duopyramid_46()
+    print("\n" + "=" * 60 + "\n")
+    generate_duopyramid_66()
+
+
+def generate_duopyramid_66():
+    print("=== 6,6-duopyramid ===")
+
+    p, q = 6, 6
+    vertices = vertices_duopyramid(p, q)
+    print(f"Vertices: {len(vertices)}")
+
+    edges = edges_duopyramid(p, q)
+    print(f"Edges: {len(edges)}")
+
+    rings = trace_rings(vertices, edges)
+    print(f"Rings: {len(rings)}")
+    for i, r in enumerate(rings):
+        print(f"  Ring {i}: {r} ({len(r)} vertices)")
+
+    # Bundle assignment via Hopf fibration
+    bundle, num_bundles = assign_bundles(rings, vertices, edges)
+    print(f"Bundles: {num_bundles}")
+    for b in range(num_bundles):
+        b_rings = [i for i in range(len(rings)) if bundle[i] == b]
+        print(f"  Bundle {b}: rings {b_rings}")
+
+    print("\n--- JavaScript output ---\n")
+    print(format_js("66-dip", vertices, rings, bundle, num_bundles, white_bundle_0=True))

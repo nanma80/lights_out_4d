@@ -14,13 +14,17 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 - Each polytope's edges lie along **great circles** of S³. Multiple edges concatenate to form closed **rings**. These rings are the core game objects.
 - Supported polytopes (in order of complexity):
 
-| Polytope | Vertices | Edges | Rings | Vertices/Ring | Edges/Ring | Status      |
-|----------|----------|-------|-------|---------------|------------|-------------|
-| 16-cell  | 8        | 24    | 6     | 4             | 4          | Implemented |
-| 24-cell  | 24       | 96    | 16    | 6             | 6          | Implemented |
-| 600-cell | 120      | 720   | 72    | 10            | 10         | Implemented |
-| Bicont   | 48       | 336   | 50    | 6 or 8        | 6 or 8     | Implemented |
-| Bideca   | 10       | 40    | 10    | 4             | 4          | Implemented |
+| Polytope | Vertices | Edges | Rings | Vertices/Ring | Edges/Ring | Hopf Bundles | GF(2) Rank | God's # | Status      |
+|----------|----------|-------|-------|---------------|------------|--------------|------------|---------|-------------|
+| 16-cell  | 8        | 24    | 6     | 4             | 4          | 3 (2+2+2)    | 3          | 2       | Implemented |
+| 24-cell  | 24       | 96    | 16    | 6             | 6          | 4 (4+4+4+4)  | 8          | 4       | Implemented |
+| 600-cell | 120      | 720   | 72    | 10            | 10         | 6 (12×6)     | 36         | ≥ 10    | Implemented |
+| Bicont   | 48       | 336   | 50    | 6 or 8        | 6 or 8     | 7             | 20         | ≥ 8     | Implemented |
+| Bideca   | 10       | 40    | 10    | 4             | 4          | 5 (2+2+2+2+2)| 4          | 2       | Implemented |
+| {6}+{6}  | 12       | 48    | 11    | 4 or 6        | 4 or 6     | 4 (3+3+3+2)  | 6          | 6       | Implemented |
+| {8}+{8}  | 16       | 80    | 18    | 4 or 8        | 4 or 8     | 5 (4+4+4+4+2)| 7          | 4       | Implemented |
+| {10}+{10}| 20       | 120   | 27    | 4 or 10       | 4 or 10    | 6 (5×5+2)    | 10         | 10      | Implemented |
+| {12}+{12}| 24       | 168   | 38    | 4 or 12       | 4 or 12    | 7 (6×6+2)    | 11         | 6       | Implemented |
 
 - Each polytope is defined as a data object (see Polytope Data Format below). Adding a new polytope = adding a new data file.
 
@@ -28,17 +32,68 @@ A browser-based puzzle game inspired by the classic "Lights Out," played on the 
 
 The incidence matrix **A** is an *n × m* binary matrix (vertices × rings) where A[i][j] = 1 iff vertex i belongs to ring j. Clicking vertex i toggles exactly the rings in row i, so the game's toggle space is the row space of **A** over GF(2).
 
-| Polytope | Matrix Size | GF(2) Rank | Nullity | Reachable States |
-|----------|-------------|------------|---------|------------------|
-| 16-cell  | 8 × 6       | 3          | 3       | 2³ = 8           |
-| 24-cell  | 24 × 16     | 8          | 8       | 2⁸ = 256         |
-| 600-cell | 120 × 72    | 36         | 36      | 2³⁶ ≈ 6.9 × 10¹⁰ |
-| Bicont   | 48 × 50     | 20         | 30      | 2²⁰ ≈ 1.0 × 10⁶  |
-| Bideca   | 10 × 10     | 4          | 6       | 2⁴ = 16          |
-
 - The rank equals exactly half the number of rings for the regular polytopes (16-cell, 24-cell, 600-cell). For bicont (which has mixed ring sizes), rank/rings = 20/50 = 2/5. For bideca, rank/rings = 4/10 = 2/5.
 - **Reachable states**: only 2^rank of the 2^rings total ring-state configurations can be reached from the all-off state by clicking vertices.
 - **Nullity** (kernel dimension = rings − rank): the number of independent "null toggles" — sets of vertex clicks that leave all rings unchanged.
+
+#### Rank formula for {2m}+{2n} duopyramids
+
+**Theorem.** The GF(2) rank of the {2m}+{2n} duopyramid incidence matrix is **m+n** if at least one of m,n is odd, and **m+n−1** if both m,n are even.
+
+**Structure.** The {2m}+{2n} duopyramid has 2(m+n) vertices forming m+n antipodal pairs: m pairs P₀,…,P_{m−1} from the {2m}-gon in the XY plane, and n pairs Q₀,…,Q_{n−1} from the {2n}-gon in the ZW plane. Each antipodal pair toggles the same set of rings, giving m+n independent controls. The rings are:
+- 1 XY-polygon ring (through all {2m}-gon vertices)
+- 1 ZW-polygon ring (through all {2n}-gon vertices)
+- mn cross rings, one for each pair (Pᵢ, Qⱼ), forming a great circle through both pairs
+
+The reduced incidence matrix after identifying antipodal pairs has rows:
+- **Pᵢ**: 1 on the XY-polygon ring, and 1 on cross ring (i,j) for all j = 0,…,n−1
+- **Qⱼ**: 1 on the ZW-polygon ring, and 1 on cross ring (i,j) for all i = 0,…,m−1
+
+**Proof.** A linear dependency Σ aᵢPᵢ + Σ bⱼQⱼ = 0 over GF(2) requires:
+1. From cross column (i,j): aᵢ + bⱼ = 0 for all i,j ⟹ all aᵢ and bⱼ equal some constant c
+2. From the XY-polygon column: mc = 0 (mod 2)
+3. From the ZW-polygon column: nc = 0 (mod 2)
+
+A nontrivial solution c = 1 exists iff m ≡ 0 and n ≡ 0 (mod 2), giving kernel dimension 1 and rank m+n−1. Otherwise the kernel is trivial and rank = m+n. ∎
+
+**Corollary.** The {2m}+{2n} duopyramid is full rank (all 2^{m+n} states reachable, every scramble solvable) iff m and n are not both even. For the duopyramids in the game: {4}+{6} has m=2, n=3 (n odd → full rank 5); {6}+{6} has m=n=3 (both odd → full rank 6). The 16-cell = {4}+{4} has m=n=2 (both even → rank 3 = m+n−1).
+
+#### General {2m}+{2n} duopyramid formulas
+
+The {2m}+{2n} duopyramid (dual of {2m}×{2n} duoprism) has:
+- **Vertices**: 2(m+n), forming m+n antipodal pairs
+- **Edges**: 2m + 2n + 4mn
+- **Rings**: 2 + mn — two polygon rings (lengths 2m and 2n) plus mn cross rings (each length 4)
+- **Ring decomposition constraint**: requires 2m and 2n both even (i.e., m,n ≥ 2), since all vertex degrees must be even. Odd polygon sides give odd vertex degrees, making edge-disjoint ring decomposition impossible.
+
+**God's number** (proven for all {2m}+{2n}):
+- **Full rank** (m or n odd): God's number = m+n, move distribution = C(m+n, k).
+- **Not full rank** (both even): God's number = (m+n)/2, distribution = C(m+n, k) for k < (m+n)/2, halved at k = (m+n)/2. The kernel vector (click all antipodal pairs) identifies states at distance k with distance (m+n)−k.
+
+**Asymmetric (m≠n) reference** (not in the game, included for analysis):
+
+| Polytope | Vertices | Edges | Rings | Rank | God's # |
+|----------|----------|-------|-------|------|---------|
+| {4}+{6}  | 10       | 34    | 8     | 5    | 5       |
+| {4}+{8}  | 12       | 44    | 10    | 5    | 3       |
+| {4}+{10} | 14       | 54    | 12    | 7    | 7       |
+| {6}+{8}  | 14       | 62    | 14    | 7    | 7       |
+| {6}+{10} | 16       | 76    | 17    | 8    | 8       |
+| {8}+{12} | 20       | 116   | 26    | 9    | 5       |
+
+#### {2n}+{2n} duopyramid reference table
+
+| Polytope | Vertices | Edges | Rings | Hopf Bundles (sizes) | Rank | God's # | Reachable States |
+|----------|----------|-------|-------|----------------------|------|---------|------------------|
+| {4}+{4}  | 8        | 24    | 6     | 3 (2+2+2)            | 3    | 2       | 2³ = 8           |
+| {6}+{6}  | 12       | 48    | 11    | 4 (3+3+3+2)          | 6    | 6       | 2⁶ = 64          |
+| {8}+{8}  | 16       | 80    | 18    | 5 (4+4+4+4+2)        | 7    | 4       | 2⁷ = 128         |
+| {10}+{10}| 20       | 120   | 27    | 6 (5+5+5+5+5+2)      | 10   | 10      | 2¹⁰ = 1024       |
+| {12}+{12}| 24       | 168   | 38    | 7 (6+6+6+6+6+6+2)    | 11   | 6       | 2¹¹ = 2048       |
+
+- **Hopf bundles**: always n+1 bundles — one bundle of 2 (the two polygon rings) plus n bundles of n (cross rings).
+- **Full rank** (n odd): God's number = n, move distribution = C(n, k). Every scramble solvable.
+- **Not full rank** (n even): God's number = n/2, move distribution = C(n, k) for k < n/2, halved at k = n/2. The kernel vector (click all antipodal pairs) identifies states at distance k with distance n−k.
 
 ### God's Number
 
@@ -46,18 +101,20 @@ God's number is the maximum number of moves needed to solve any solvable puzzle 
 
 Lower bounds are established by counting: with n independent click choices, at most Σ C(n,i) for i=0..k distinct states are reachable in ≤k moves. For polytopes with antipodal symmetry (e.g., Bicont), each vertex and its antipode toggle the same rings, so n = vertices/2.
 
-| Polytope | God's Number | Move Distribution |
-|----------|-------------|-------------------|
-| 16-cell  | 2           | 0:1, 1:4, 2:3 |
-| 24-cell  | 4           | 0:1, 1:12, 2:66, 3:116, 4:61 |
-| 600-cell | ≥ 10 (lower bound) | Not yet computed |
-| Bicont   | ≥ 8 (lower bound)  | Not yet computed |
-| Bideca   | 2           | 0:1, 1:5, 2:10 |
+Move distributions for polytopes with exact God's numbers:
+
+| Polytope | Move Distribution |
+|----------|-------------------|
+| 16-cell  | 0:1, 1:4, 2:3 |
+| 24-cell  | 0:1, 1:12, 2:66, 3:116, 4:61 |
+| Bideca   | 0:1, 1:5, 2:10 |
+| {6}+{6}  | 0:1, 1:6, 2:15, 3:20, 4:15, 5:6, 6:1 |
 
 ### Ring Coloring
 - Each ring is assigned a **color** for its ON state. OFF-state rings are always medium gray (#888888, 70% opacity).
 - **16-cell**: each ring gets a unique color (one color per ring, 6 colors for 6 rings). Hopf fibration gives 3 bundles of 2, but 6 individual colors are used for visual variety.
 - **Bideca**: 5 bundles of 2 vertex-disjoint rings each. Quaternion quotient gives 10 distinct quotients (no shared bundles), so bundles are assigned by finding a perfect matching of vertex-disjoint ring pairs instead.
+- **{2n}+{2n} duopyramids**: n+1 Hopf bundles via quaternion quotients — 1 bundle of 2 polygon rings (white, aligned to main axes) + n bundles of n cross rings. Cross-bundle colors are consistent across all duopyramids: green, red, yellow, blue, orange, purple.
 - **24-cell, 600-cell, and Bicont**: rings are grouped into **Hopf fibration bundles** via quaternion quotients — rings in the same bundle share a color. The `bundle` field in the polytope data encodes this grouping.
 - Color palette: `["#ff3366", "#33ff66", "#3366ff", "#ffcc00", "#ff6633", "#cc33ff", "#33ccff"]`.
 
@@ -323,7 +380,7 @@ This documents the full process used to add Bideca (bidecachoron) as a worked ex
   - "Scramble" button
   - "Reset" button
   - "+" / "−" zoom buttons
-  - Polytope selector (dropdown: 16-cell, 24-cell, 600-cell, Bicont, Bideca)
+  - Polytope selector (dropdown: 16-cell, 24-cell, 600-cell, Bicont, Bideca, {6}+{6}, {8}+{8}, {10}+{10}, {12}+{12})
 - Win overlay: centered translucent text over the scene.
 
 ### Responsive
