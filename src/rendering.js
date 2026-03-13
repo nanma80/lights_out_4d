@@ -276,7 +276,6 @@ export class Renderer {
         const w = rotatedVertices4D[i][3];
         const fade = wToFade(w);
         mesh.material.opacity = fade;
-        mesh.material.transparent = fade < 1.0;
         mesh.visible = fade > 0.01;
       } else {
         mesh.visible = false;
