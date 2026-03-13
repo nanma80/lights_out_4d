@@ -2,7 +2,7 @@
 
 import { POLYTOPE_16CELL, POLYTOPE_24CELL, POLYTOPE_600CELL, POLYTOPE_BICONT, POLYTOPE_BIDECA, POLYTOPE_66DIP, POLYTOPE_88DIP, POLYTOPE_1010DIP, POLYTOPE_1212DIP } from './polytopes.js?v=10';
 import { rotate4D } from './math4d.js?v=10';
-import { Renderer } from './rendering.js?v=10';
+import { Renderer } from './rendering.js?v=11';
 import { Trackball, Rotation4D, ClickHandler } from './controls.js?v=10';
 import { Game } from './game.js?v=10';
 
