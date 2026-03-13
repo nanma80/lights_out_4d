@@ -34,7 +34,7 @@ void main() {
   vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
   vViewPosition = -mvPosition.xyz;
   vNormal = normalMatrix * normal;
-  vFadeAlpha = 1.0 - smoothstep(${FADE_START}, ${FADE_END}, length(position));
+  vFadeAlpha = 1.0 - smoothstep(${FADE_START.toFixed(1)}, ${FADE_END.toFixed(1)}, length(position));
   gl_Position = projectionMatrix * mvPosition;
 }
 `;
