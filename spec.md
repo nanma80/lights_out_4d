@@ -147,7 +147,7 @@ Move distributions for polytopes with exact God's numbers:
 - **Vertices**: `SphereGeometry` (radius 0.12), white with subtle emissive glow. Pointer cursor on canvas.
 - **Rings ON**: colored tube geometry with emissive glow (emissiveIntensity 0.5). Full opacity.
 - **Rings OFF**: gray (#888888) tube geometry, 70% opacity, no emissive.
-- **Distance fade**: vertices and ring tubes gradually fade to transparent when their stereographic projection places them far from the origin (approaching infinity). Fade uses a smoothstep from distance 10 to 15. Tubes use a custom `ShaderMaterial` with per-vertex fade computed in GLSL; vertex spheres set `material.opacity` from the same distance range.
+- **Distance fade**: vertices and ring tubes gradually fade to transparent when their stereographic projection places them far from the origin (approaching infinity). Fade uses a smoothstep from distance 10 to 15. Tubes use `MeshPhongMaterial` with `onBeforeCompile` shader injection for per-vertex fade in GLSL; vertex spheres set `material.opacity` from the same distance range.
 - **Lighting**: ambient (0.6) + directional (0.8) from (5, 5, 5).
 - Edges rendered as 48-segment arcs with tube radius 0.03.
 - **Geometry pooling**: vertex spheres and edge tubes are allocated once into pools and reused across rebuilds by updating buffer attributes in-place. This avoids GPU memory leaks on Safari/iOS where `BufferGeometry.dispose()` doesn't reliably free resources.

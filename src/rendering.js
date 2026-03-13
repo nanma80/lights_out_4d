@@ -11,68 +11,28 @@ const RING_TUBE_RADIUS = 0.03;
 const ARC_SEGMENTS = 48;
 const RADIAL_SEGMENTS = 8;
 const DEFAULT_CAMERA_DISTANCE = 5;
-// Tube fade: per-vertex alpha via custom ShaderMaterial
+// Distance fade: tubes and vertices fade to transparent near infinity
 const FADE_START = 10.0;
 const FADE_END = 15.0;
 
-// Vertex fade: based on 4D w-coordinate for smooth transitions
-const W_FADE_START = -0.7;
-const W_FADE_END = -0.96;
-
-function wToFade(w) {
-  if (w >= W_FADE_START) return 1.0;
-  if (w <= W_FADE_END) return 0.0;
-  const t = (W_FADE_START - w) / (W_FADE_START - W_FADE_END);
-  return 1 - t * t * (3 - 2 * t);
-}
-
-const FADE_VERT = `
-varying vec3 vNormal;
-varying vec3 vViewPosition;
-varying float vFadeAlpha;
+function applyFadeShader(material) {
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader.replace(
+      'void main() {',
+      `varying float vFadeAlpha;
 void main() {
-  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-  vViewPosition = -mvPosition.xyz;
-  vNormal = normalMatrix * normal;
-  vFadeAlpha = 1.0 - smoothstep(${FADE_START.toFixed(1)}, ${FADE_END.toFixed(1)}, length(position));
-  gl_Position = projectionMatrix * mvPosition;
-}
-`;
-
-const FADE_FRAG = `
-uniform vec3 diffuse;
-uniform vec3 emissive;
-uniform float emissiveIntensity;
-uniform float opacity;
-varying vec3 vNormal;
-varying vec3 vViewPosition;
-varying float vFadeAlpha;
-void main() {
-  vec3 normal = normalize(vNormal);
-  vec3 viewDir = normalize(vViewPosition);
-  vec3 lightDir = normalize(vec3(5.0, 5.0, 5.0));
-  float NdotL = max(dot(normal, lightDir), 0.0);
-  vec3 halfDir = normalize(lightDir + viewDir);
-  float spec = pow(max(dot(normal, halfDir), 0.0), 30.0);
-  vec3 color = diffuse * (0.6 + NdotL * 0.8) + vec3(0.067) * spec * 0.8
-             + emissive * emissiveIntensity;
-  gl_FragColor = vec4(color, opacity * vFadeAlpha);
-}
-`;
-
-function createFadeMaterial() {
-  return new THREE.ShaderMaterial({
-    uniforms: {
-      diffuse: { value: new THREE.Color(1, 1, 1) },
-      emissive: { value: new THREE.Color(0, 0, 0) },
-      emissiveIntensity: { value: 0.0 },
-      opacity: { value: 1.0 },
-    },
-    vertexShader: FADE_VERT,
-    fragmentShader: FADE_FRAG,
-    transparent: true,
-    depthWrite: true,
-  });
+  vFadeAlpha = 1.0 - smoothstep(${FADE_START.toFixed(1)}, ${FADE_END.toFixed(1)}, length(position));`
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      'void main() {',
+      'varying float vFadeAlpha;\nvoid main() {'
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <opaque_fragment>',
+      '#include <opaque_fragment>\n\tgl_FragColor.a *= vFadeAlpha;'
+    );
+  };
+  material.customProgramCacheKey = function() { return 'phong-fade'; };
 }
 
 // Build tube geometry data (positions + normals) without creating a THREE.BufferGeometry.
@@ -273,7 +233,6 @@ export class Renderer {
         mesh.position.set(projected[i][0], projected[i][1], projected[i][2]);
         mesh.scale.setScalar(vertexRadius / VERTEX_RADIUS);
         mesh.userData.vertexIndex = i;
-        const w = rotatedVertices4D[i][3];
         const dist = Math.sqrt(projected[i][0] ** 2 + projected[i][1] ** 2 + projected[i][2] ** 2);
         const t = Math.max(0, Math.min(1, (dist - FADE_START) / (FADE_END - FADE_START)));
         const fade = 1 - t * t * (3 - 2 * t);
@@ -288,7 +247,8 @@ export class Renderer {
     // Grow edge pool if needed
     while (this._edgePool.length < totalEdges) {
       const geo = new THREE.BufferGeometry();
-      const mat = createFadeMaterial();
+      const mat = new THREE.MeshPhongMaterial({ transparent: true, depthWrite: true });
+      applyFadeShader(mat);
       const mesh = new THREE.Mesh(geo, mat);
       this.ringGroup.add(mesh);
       this._edgePool.push(mesh);
@@ -345,11 +305,11 @@ export class Renderer {
         }
         poolGeo.computeBoundingSphere();
 
-        // Update material uniforms
-        mesh.material.uniforms.diffuse.value.copy(color);
-        mesh.material.uniforms.opacity.value = opacity;
-        mesh.material.uniforms.emissive.value.copy(isOn ? color : new THREE.Color(0x000000));
-        mesh.material.uniforms.emissiveIntensity.value = isOn ? 0.5 : 0;
+        // Update material
+        mesh.material.color.set(color);
+        mesh.material.opacity = opacity;
+        mesh.material.emissive.set(isOn ? color : new THREE.Color(0x000000));
+        mesh.material.emissiveIntensity = isOn ? 0.5 : 0;
         mesh.visible = true;
 
         edgeMeshes.push(mesh);
@@ -376,10 +336,10 @@ export class Renderer {
 
       if (this.ringMeshes[ringIdx]) {
         this.ringMeshes[ringIdx].forEach(mesh => {
-          mesh.material.uniforms.diffuse.value.copy(color);
-          mesh.material.uniforms.opacity.value = opacity;
-          mesh.material.uniforms.emissive.value.copy(isOn ? color : new THREE.Color(0x000000));
-          mesh.material.uniforms.emissiveIntensity.value = isOn ? 0.5 : 0;
+          mesh.material.color.copy(color);
+          mesh.material.opacity = opacity;
+          mesh.material.emissive.copy(isOn ? color : new THREE.Color(0x000000));
+          mesh.material.emissiveIntensity = isOn ? 0.5 : 0;
         });
       }
     });
