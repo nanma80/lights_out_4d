@@ -274,7 +274,9 @@ export class Renderer {
         mesh.scale.setScalar(vertexRadius / VERTEX_RADIUS);
         mesh.userData.vertexIndex = i;
         const w = rotatedVertices4D[i][3];
-        const fade = wToFade(w);
+        const dist = Math.sqrt(projected[i][0] ** 2 + projected[i][1] ** 2 + projected[i][2] ** 2);
+        const t = Math.max(0, Math.min(1, (dist - FADE_START) / (FADE_END - FADE_START)));
+        const fade = 1 - t * t * (3 - 2 * t);
         mesh.material.opacity = fade;
         mesh.visible = fade > 0.01;
       } else {
