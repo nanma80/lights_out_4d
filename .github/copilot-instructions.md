@@ -16,6 +16,9 @@ This is a browser-based puzzle game where players interact with a stereographic 
 - All UI elements must be ≥ 44×44px for touch targets.
 - Must work on PC browsers, iPhone Safari, and Android Chrome.
 
+## Workflow
+- **Do not git commit until the user explicitly confirms.** Wait for approval before committing.
+
 ## Testing
 - Run `python -m http.server 8080` from repo root to test locally.
 - Test on mobile via local network IP on same WiFi.
