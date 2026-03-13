@@ -11,13 +11,19 @@ const RING_TUBE_RADIUS = 0.03;
 const ARC_SEGMENTS = 48;
 const RADIAL_SEGMENTS = 8;
 const DEFAULT_CAMERA_DISTANCE = 5;
-const FADE_START = 4.0;
-const FADE_END = 12.0;
+// Tube fade: computed from 3D distance in the vertex shader
+const FADE_START = 2.0;
+const FADE_END = 6.0;
 
-function distanceToFade(dist) {
-  if (dist <= FADE_START) return 1.0;
-  if (dist >= FADE_END) return 0.0;
-  const t = (dist - FADE_START) / (FADE_END - FADE_START);
+// Vertex fade: computed from the 4D w-coordinate in JS.
+// w changes linearly with 4D rotation, giving smooth visual transitions.
+const W_FADE_START = -0.4;
+const W_FADE_END = -0.88;
+
+function wToFade(w) {
+  if (w >= W_FADE_START) return 1.0;
+  if (w <= W_FADE_END) return 0.0;
+  const t = (W_FADE_START - w) / (W_FADE_START - W_FADE_END);
   return 1 - t * t * (3 - 2 * t);
 }
 
@@ -25,7 +31,9 @@ function applyFadeShader(material) {
   material.onBeforeCompile = (shader) => {
     shader.vertexShader = shader.vertexShader.replace(
       'void main() {',
-      'attribute float fadeAlpha;\nvarying float vFadeAlpha;\nvoid main() {\n  vFadeAlpha = fadeAlpha;'
+      `varying float vFadeAlpha;
+void main() {
+  vFadeAlpha = 1.0 - smoothstep(${FADE_START.toFixed(1)}, ${FADE_END.toFixed(1)}, length(position));`
     );
     shader.fragmentShader = shader.fragmentShader.replace(
       'void main() {',
@@ -46,7 +54,6 @@ function buildTubeData(curvePoints, radius, tubularSegments, radialSegments) {
   const positions = new Float32Array(numVerts * 3);
   const normals = new Float32Array(numVerts * 3);
   const uvs = new Float32Array(numVerts * 2);
-  const fadeAlphas = new Float32Array(numVerts);
 
   // Compute Frenet-like frames along the curve
   const tangents = [];
@@ -85,11 +92,9 @@ function buildTubeData(curvePoints, radius, tubularSegments, radialSegments) {
     t0[0] * normal[1] - t0[1] * normal[0],
   ];
 
-  let idx = 0, uvIdx = 0, vertIdx = 0;
+  let idx = 0, uvIdx = 0;
   for (let i = 0; i <= tubularSegments; i++) {
     const P = curvePoints[Math.min(i, curvePoints.length - 1)];
-    const dist = Math.sqrt(P[0] * P[0] + P[1] * P[1] + P[2] * P[2]);
-    const fade = distanceToFade(dist);
 
     // Propagate frame via parallel transport
     if (i > 0) {
@@ -133,7 +138,6 @@ function buildTubeData(curvePoints, radius, tubularSegments, radialSegments) {
       uvs[uvIdx] = i / tubularSegments;
       uvs[uvIdx + 1] = j / radialSegments;
       uvIdx += 2;
-      fadeAlphas[vertIdx++] = fade;
     }
   }
 
@@ -150,7 +154,7 @@ function buildTubeData(curvePoints, radius, tubularSegments, radialSegments) {
     }
   }
 
-  return { positions, normals, uvs, indices, fadeAlphas };
+  return { positions, normals, uvs, indices };
 }
 
 export class Renderer {
@@ -240,8 +244,8 @@ export class Renderer {
         mesh.position.set(projected[i][0], projected[i][1], projected[i][2]);
         mesh.scale.setScalar(vertexRadius / VERTEX_RADIUS);
         mesh.userData.vertexIndex = i;
-        const dist = Math.sqrt(projected[i][0] ** 2 + projected[i][1] ** 2 + projected[i][2] ** 2);
-        const fade = distanceToFade(dist);
+        const w = rotatedVertices4D[i][3];
+        const fade = wToFade(w);
         mesh.material.opacity = fade;
         mesh.material.transparent = fade < 1.0;
         mesh.visible = fade > 0.01;
@@ -303,15 +307,12 @@ export class Renderer {
           poolGeo.setAttribute('position', new THREE.BufferAttribute(tubeData.positions, 3));
           poolGeo.setAttribute('normal', new THREE.BufferAttribute(tubeData.normals, 3));
           poolGeo.setAttribute('uv', new THREE.BufferAttribute(tubeData.uvs, 2));
-          poolGeo.setAttribute('fadeAlpha', new THREE.BufferAttribute(tubeData.fadeAlphas, 1));
           poolGeo.setIndex(new THREE.BufferAttribute(tubeData.indices, 1));
         } else {
           poolGeo.attributes.position.array.set(tubeData.positions);
           poolGeo.attributes.position.needsUpdate = true;
           poolGeo.attributes.normal.array.set(tubeData.normals);
           poolGeo.attributes.normal.needsUpdate = true;
-          poolGeo.attributes.fadeAlpha.array.set(tubeData.fadeAlphas);
-          poolGeo.attributes.fadeAlpha.needsUpdate = true;
         }
         poolGeo.computeBoundingSphere();
 
