@@ -12,8 +12,8 @@ const ARC_SEGMENTS = 48;
 const RADIAL_SEGMENTS = 8;
 const DEFAULT_CAMERA_DISTANCE = 5;
 // Tube fade: per-vertex alpha via custom ShaderMaterial
-const FADE_START = 3.0;
-const FADE_END = 8.0;
+const FADE_START = 5.0;
+const FADE_END = 12.0;
 
 // Vertex fade: based on 4D w-coordinate for smooth transitions
 const W_FADE_START = -0.7;
